@@ -1,90 +1,160 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+
+const API = "http://localhost:3001";
+// Quando publicar online, troque por:
+// const API = "https://backend-esquadrias.onrender.com";
 
 export default function Perfis() {
-  const API = "http://localhost:3001";
+  const [perfis, setPerfis] = useState([]);
+  const [imagem, setImagem] = useState(null);
+  const [preview, setPreview] = useState("");
 
-  const vazio = {
+  const [form, setForm] = useState({
+    nome: "",
+    fabricante: "",
+    linha: "Gold",
     codigo: "",
     descricao: "",
     peso_kg_m: "",
-    barra: 6000,
-    linha: "Gold",
-    referencia: "DIVERSOS",
-    tipo: "Marco",
     valor_kg: "",
-    imagem: "",
-  };
-
-  const [perfis, setPerfis] = useState([]);
-  const [form, setForm] = useState(vazio);
-  const [busca, setBusca] = useState("");
+    cor: "",
+    acabamento: "",
+    observacao: "",
+  });
 
   useEffect(() => {
-    carregar();
+    carregarPerfis();
   }, []);
 
-  async function carregar() {
-    const r = await fetch(`${API}/perfis`);
-    const d = await r.json();
-    setPerfis(Array.isArray(d) ? d : []);
-  }
-
-  async function salvar() {
-    if (!form.codigo || !form.descricao) {
-      alert("Digite código e descrição");
-      return;
+  async function carregarPerfis() {
+    try {
+      const res = await fetch(`${API}/perfis`);
+      const data = await res.json();
+      setPerfis(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.log(error);
+      setPerfis([]);
     }
-
-    await fetch(`${API}/perfis`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    setForm(vazio);
-    carregar();
   }
 
-  const lista = perfis.filter((p) =>
-    `${p.codigo || ""} ${p.descricao || ""} ${p.nome || ""}`
-      .toLowerCase()
-      .includes(busca.toLowerCase())
-  );
+  function selecionarImagem(e) {
+    const file = e.target.files[0];
+    setImagem(file);
+
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+    }
+  }
+
+  async function salvarPerfil(e) {
+    e.preventDefault();
+
+    try {
+      let caminhoImagem = "";
+
+      if (imagem) {
+        const dadosImagem = new FormData();
+        dadosImagem.append("imagem", imagem);
+
+        const resUpload = await fetch(`${API}/upload-perfil`, {
+          method: "POST",
+          body: dadosImagem,
+        });
+
+        const imgData = await resUpload.json();
+
+        if (!resUpload.ok) {
+          alert(imgData.erro || "Erro ao enviar imagem.");
+          return;
+        }
+
+        caminhoImagem = imgData.imagem;
+      }
+
+      const res = await fetch(`${API}/perfis`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...form,
+          imagem: caminhoImagem,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.erro || "Erro ao salvar perfil.");
+        return;
+      }
+
+      alert("Perfil salvo com imagem!");
+
+      setForm({
+        nome: "",
+        fabricante: "",
+        linha: "Gold",
+        codigo: "",
+        descricao: "",
+        peso_kg_m: "",
+        valor_kg: "",
+        cor: "",
+        acabamento: "",
+        observacao: "",
+      });
+
+      setImagem(null);
+      setPreview("");
+      carregarPerfis();
+    } catch (error) {
+      console.log(error);
+      alert("Erro ao salvar perfil.");
+    }
+  }
+
+  function dinheiro(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
 
   return (
-    <div style={pagina}>
-      <div style={topo}>
-        <input
-          style={buscaInput}
-          placeholder="Digite o código"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
-        <button style={btnAzul}>Buscar Código</button>
-        <button style={btnPreto}>Novo Perfil</button>
-      </div>
+    <div style={page}>
+      <h1>Cadastro de Perfis PRO</h1>
+      <p style={{ color: "#64748b" }}>
+        Biblioteca visual de perfis com imagem, fabricante, linha, peso e valor por kg.
+      </p>
 
-      <div style={grid}>
-        <div style={card}>
-          <h2>Novo Perfil</h2>
+      <form style={card} onSubmit={salvarPerfil}>
+        <h2>Novo Perfil</h2>
 
-          <div style={preview}>
-            <div style={boxImg}>
-              {form.imagem ? (
-                <img src={form.imagem} alt="" width="80" />
-              ) : (
-                "Imagem"
-              )}
-            </div>
+        <div style={grid}>
+          <input
+            style={input}
+            placeholder="Nome do perfil"
+            value={form.nome}
+            onChange={(e) => setForm({ ...form, nome: e.target.value })}
+          />
 
-            <div>
-              <b>{form.descricao || "Nome do perfil"}</b>
-              <p>{form.codigo || "Código"}</p>
-              <small>
-                {form.linha} • {form.tipo}
-              </small>
-            </div>
-          </div>
+          <input
+            style={input}
+            placeholder="Fabricante"
+            value={form.fabricante}
+            onChange={(e) => setForm({ ...form, fabricante: e.target.value })}
+          />
+
+          <select
+            style={input}
+            value={form.linha}
+            onChange={(e) => setForm({ ...form, linha: e.target.value })}
+          >
+            <option>Gold</option>
+            <option>Suprema</option>
+            <option>Integrada</option>
+            <option>Especial</option>
+          </select>
 
           <input
             style={input}
@@ -95,24 +165,14 @@ export default function Perfis() {
 
           <input
             style={input}
-            placeholder="Descrição"
+            placeholder="Descrição técnica"
             value={form.descricao}
             onChange={(e) => setForm({ ...form, descricao: e.target.value })}
           />
 
-          <select
-            style={input}
-            value={form.linha}
-            onChange={(e) => setForm({ ...form, linha: e.target.value })}
-          >
-            <option>Gold</option>
-            <option>Suprema</option>
-            <option>Santa Marina</option>
-            <option>DIVERSOS</option>
-          </select>
-
           <input
             style={input}
+            type="number"
             placeholder="Peso kg/m"
             value={form.peso_kg_m}
             onChange={(e) => setForm({ ...form, peso_kg_m: e.target.value })}
@@ -120,192 +180,169 @@ export default function Perfis() {
 
           <input
             style={input}
-            placeholder="Barra padrão Ex: 6000"
-            value={form.barra}
-            onChange={(e) => setForm({ ...form, barra: e.target.value })}
-          />
-
-          <select
-            style={input}
-            value={form.tipo}
-            onChange={(e) => setForm({ ...form, tipo: e.target.value })}
-          >
-            <option>Marco</option>
-            <option>Folha</option>
-            <option>Trilho</option>
-            <option>Travessa</option>
-            <option>Arremate</option>
-            <option>Coluna</option>
-            <option>Outro</option>
-          </select>
-
-          <input
-            style={input}
-            placeholder="Valor kg alumínio"
+            type="number"
+            placeholder="Valor kg"
             value={form.valor_kg}
             onChange={(e) => setForm({ ...form, valor_kg: e.target.value })}
           />
 
           <input
             style={input}
-            placeholder="URL da imagem"
-            value={form.imagem}
-            onChange={(e) => setForm({ ...form, imagem: e.target.value })}
+            placeholder="Cor"
+            value={form.cor}
+            onChange={(e) => setForm({ ...form, cor: e.target.value })}
           />
 
-          <button style={btnSalvar} onClick={salvar}>
-            Salvar Perfil
-          </button>
+          <input
+            style={input}
+            placeholder="Acabamento"
+            value={form.acabamento}
+            onChange={(e) => setForm({ ...form, acabamento: e.target.value })}
+          />
+
+          <input
+            style={input}
+            type="file"
+            accept="image/*"
+            onChange={selecionarImagem}
+          />
         </div>
 
-        <div style={cardLista}>
-          <h2>Perfis Cadastrados</h2>
+        <textarea
+          style={textarea}
+          placeholder="Observação técnica"
+          value={form.observacao}
+          onChange={(e) => setForm({ ...form, observacao: e.target.value })}
+        />
 
-          <table style={tabela}>
-            <thead>
-              <tr>
-                <th>Imagem</th>
-                <th>Código</th>
-                <th>Nome</th>
-                <th>Linha</th>
-                <th>Peso kg/m</th>
-                <th>Barra</th>
-                <th>Valor</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
+        {preview && (
+          <div style={previewBox}>
+            <img src={preview} alt="Prévia" style={previewImg} />
+          </div>
+        )}
 
-            <tbody>
-              {lista.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    {p.imagem ? (
-                      <img src={p.imagem} alt="" width="45" />
-                    ) : (
-                      <div style={miniImg}>IMG</div>
-                    )}
-                  </td>
-                  <td>{p.codigo}</td>
-                  <td>{p.descricao || p.nome}</td>
-                  <td>{p.linha}</td>
-                  <td>{Number(p.peso_kg_m || 0).toFixed(3)}</td>
-                  <td>{p.barra || 6000}</td>
-                  <td>R$ {Number(p.valor_unitario || 0).toFixed(2)}</td>
-                  <td>...</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <button style={btn}>Salvar Perfil com Imagem</button>
+      </form>
+
+      <div style={card}>
+        <h2>Biblioteca Visual de Perfis</h2>
+
+        <div style={cards}>
+          {perfis.map((p) => (
+            <div key={p.id} style={perfilCard}>
+              {p.imagem ? (
+                <img
+                  src={`${API}${p.imagem}`}
+                  alt={p.nome || p.descricao}
+                  style={perfilImg}
+                />
+              ) : (
+                <div style={semImagem}>Sem imagem</div>
+              )}
+
+              <h3>{p.nome || p.descricao}</h3>
+
+              <p><b>Fabricante:</b> {p.fabricante || "-"}</p>
+              <p><b>Linha:</b> {p.linha || "-"}</p>
+              <p><b>Código:</b> {p.codigo || "-"}</p>
+              <p><b>Peso:</b> {p.peso_kg_m || p.peso_kg || 0} kg/m</p>
+              <p><b>Valor kg:</b> {dinheiro(p.valor_kg)}</p>
+              <p><b>Cor:</b> {p.cor || p.acabamento || "-"}</p>
+            </div>
+          ))}
         </div>
+
+        {perfis.length === 0 && <p>Nenhum perfil cadastrado.</p>}
       </div>
     </div>
   );
 }
 
-const pagina = {
-  padding: 25,
-  background: "#e9f1ef",
+const page = {
   minHeight: "100vh",
-};
-
-const topo = {
-  display: "grid",
-  gridTemplateColumns: "1fr 150px 130px",
-  gap: 12,
-  marginBottom: 20,
-};
-
-const buscaInput = {
-  padding: 15,
-  borderRadius: 10,
-  border: "1px solid #cbd5d1",
-};
-
-const btnAzul = {
-  background: "#1d4ed8",
-  color: "white",
-  border: 0,
-  borderRadius: 10,
-  fontWeight: "bold",
-};
-
-const btnPreto = {
-  background: "#020617",
-  color: "white",
-  border: 0,
-  borderRadius: 10,
-  fontWeight: "bold",
-};
-
-const grid = {
-  display: "grid",
-  gridTemplateColumns: "380px 1fr",
-  gap: 25,
+  background: "#eef2f7",
+  padding: 30,
 };
 
 const card = {
   background: "white",
-  borderRadius: 18,
-  padding: 25,
-  boxShadow: "0 10px 30px rgba(0,0,0,.08)",
+  borderRadius: 20,
+  padding: 24,
+  marginTop: 22,
+  boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
 };
 
-const cardLista = {
-  background: "white",
-  borderRadius: 18,
-  padding: 25,
-  boxShadow: "0 10px 30px rgba(0,0,0,.08)",
-};
-
-const preview = {
-  display: "flex",
-  gap: 15,
-  padding: 15,
-  border: "1px dashed #b8c7c2",
-  borderRadius: 14,
-  marginBottom: 18,
-};
-
-const boxImg = {
-  width: 85,
-  height: 70,
-  borderRadius: 12,
-  background: "#dbe7e4",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(4, 1fr)",
+  gap: 12,
 };
 
 const input = {
-  width: "100%",
   padding: 13,
-  borderRadius: 10,
-  border: "1px solid #d0d7de",
-  marginBottom: 12,
+  borderRadius: 12,
+  border: "1px solid #cbd5e1",
 };
 
-const btnSalvar = {
+const textarea = {
+  ...input,
   width: "100%",
-  padding: 15,
+  minHeight: 80,
+  marginTop: 14,
+  boxSizing: "border-box",
+};
+
+const btn = {
+  marginTop: 18,
+  padding: "15px 24px",
+  border: "none",
   borderRadius: 12,
-  border: 0,
   background: "#0f172a",
   color: "white",
   fontWeight: "bold",
+  cursor: "pointer",
 };
 
-const tabela = {
+const previewBox = {
+  marginTop: 18,
+};
+
+const previewImg = {
+  width: 240,
+  height: 150,
+  objectFit: "cover",
+  borderRadius: 14,
+  border: "1px solid #cbd5e1",
+};
+
+const cards = {
+  display: "grid",
+  gridTemplateColumns: "repeat(4, 1fr)",
+  gap: 18,
+};
+
+const perfilCard = {
+  background: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  borderRadius: 18,
+  padding: 15,
+};
+
+const perfilImg = {
   width: "100%",
-  borderCollapse: "collapse",
+  height: 150,
+  objectFit: "cover",
+  borderRadius: 14,
+  marginBottom: 12,
 };
 
-const miniImg = {
-  width: 45,
-  height: 35,
-  background: "#dbe7e4",
-  borderRadius: 6,
-  fontSize: 11,
+const semImagem = {
+  height: 150,
+  background: "#e5e7eb",
+  borderRadius: 14,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  color: "#64748b",
+  marginBottom: 12,
 };

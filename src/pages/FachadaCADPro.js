@@ -1,390 +1,472 @@
-import React, { useMemo, useState } from "react";
-import "./FachadaCADPro.css";
-import FachadaPDF from "./FachadaPDF";
+import React, { useEffect, useState } from "react";
 
-const TIPOS = ["FIXO", "PORTA", "MAXIM-AR", "CORRER", "PELE-VIDRO", "VAZIO"];
+const API = "http://localhost:3001";
+// ONLINE:
+// const API = "https://backend-esquadrias.onrender.com";
 
-function criarCelula() {
-  return {
-    tipo: "FIXO",
-    tipologia: "VIDRO FIXO",
-    linha: "Gold",
-    observacao: "",
-    subdivisoes: [],
-  };
+const TIPOS = {
+  FIXO: "FIXO",
+  MAXIMAR: "MAXIMAR",
+  PORTA: "PORTA",
+  CORRER: "CORRER",
+  VAZIO: "VAZIO",
+};
+
+function gerarGrade(colunas, linhas) {
+  const grade = [];
+
+  for (let y = 0; y < linhas; y++) {
+    const linha = [];
+
+    for (let x = 0; x < colunas; x++) {
+      linha.push({
+        tipo: TIPOS.FIXO,
+        largura: 1000,
+        altura: 1000,
+      });
+    }
+
+    grade.push(linha);
+  }
+
+  return grade;
 }
 
 export default function FachadaCADPro() {
-  async function enviarParaProducao() {
-  try {
-    alert("Produção enviada com sucesso!");
-  } catch (error) {
-    console.log(error);
+  const [nome, setNome] = useState("");
+  const [obra, setObra] = useState("");
+  const [colunas, setColunas] = useState(3);
+  const [linhas, setLinhas] = useState(2);
+
+  const [grade, setGrade] = useState(
+    gerarGrade(3, 2)
+  );
+
+  const [fachadas, setFachadas] = useState([]);
+
+  useEffect(() => {
+    carregarFachadas();
+  }, []);
+
+  async function carregarFachadas() {
+    try {
+      const res = await fetch(`${API}/fachadas`);
+      const data = await res.json();
+
+      setFachadas(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.log(error);
+      setFachadas([]);
+    }
   }
-}
-  const [nome, setNome] = useState("Fachada Principal");
 
-  const [linhas, setLinhas] = useState([
-    { altura: 1200 },
-    { altura: 1200 },
-  ]);
+  function criarNovaGrade() {
+    setGrade(
+      gerarGrade(
+        Number(colunas),
+        Number(linhas)
+      )
+    );
+  }
 
-  const [colunas, setColunas] = useState([
-    { largura: 1000 },
-    { largura: 1000 },
-    { largura: 1000 },
-  ]);
+  function alterarModulo(y, x, campo, valor) {
+    const nova = [...grade];
 
-  const [grade, setGrade] = useState([
-    [criarCelula(), criarCelula(), criarCelula()],
-    [criarCelula(), criarCelula(), criarCelula()],
-  ]);
+    nova[y][x][campo] = valor;
 
-  const [selecionado, setSelecionado] = useState({ row: 0, col: 0 });
+    setGrade(nova);
+  }
 
-  const larguraTotal = useMemo(
-    () => colunas.reduce((s, c) => s + Number(c.largura || 0), 0),
-    [colunas]
-  );
+  function calcularAreaTotal() {
+    let total = 0;
 
-  const alturaTotal = useMemo(
-    () => linhas.reduce((s, l) => s + Number(l.altura || 0), 0),
-    [linhas]
-  );
+    grade.forEach((linha) => {
+      linha.forEach((modulo) => {
+        const area =
+          (modulo.largura / 1000) *
+          (modulo.altura / 1000);
 
-  const areaTotal = ((larguraTotal * alturaTotal) / 1000000).toFixed(2);
-
-  const materiais = useMemo(() => {
-    let aluminio = 0;
-    let vidro = 0;
-
-    grade.forEach((linha, row) => {
-      linha.forEach((modulo, col) => {
-        if (modulo.tipo === "VAZIO") return;
-
-        const largura = Number(colunas[col]?.largura || 0) / 1000;
-        const altura = Number(linhas[row]?.altura || 0) / 1000;
-
-        aluminio += largura * 2 + altura * 2;
-        vidro += largura * altura;
+        total += area;
       });
     });
 
-    return {
-      aluminio: aluminio.toFixed(2),
-      vidro: vidro.toFixed(2),
-    };
-  }, [grade, colunas, linhas]);
-
-  function alterarCelula(campo, valor) {
-    const nova = grade.map((linha) => linha.map((m) => ({ ...m })));
-    nova[selecionado.row][selecionado.col][campo] = valor;
-    setGrade(nova);
+    return total.toFixed(2);
   }
 
-  function adicionarLinha() {
-    setLinhas([...linhas, { altura: 1200 }]);
-    setGrade([...grade, Array(colunas.length).fill(0).map(() => criarCelula())]);
+  function calcularVidro() {
+    return (calcularAreaTotal() * 220).toFixed(2);
   }
 
-  function adicionarColuna() {
-    setColunas([...colunas, { largura: 1000 }]);
-    setGrade(grade.map((linha) => [...linha, criarCelula()]));
+  function calcularAluminio() {
+    return (calcularAreaTotal() * 180).toFixed(2);
   }
 
-  function alterarAltura(index, valor) {
-    const nova = [...linhas];
-    nova[index].altura = Number(valor);
-    setLinhas(nova);
+  function calcularTotal() {
+    return (
+      Number(calcularVidro()) +
+      Number(calcularAluminio())
+    ).toFixed(2);
   }
 
-  function alterarLargura(index, valor) {
-    const nova = [...colunas];
-    nova[index].largura = Number(valor);
-    setColunas(nova);
+  async function salvarFachada() {
+    try {
+      const res = await fetch(`${API}/fachadas`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          nome,
+          obra,
+          colunas,
+          linhas,
+          desenho_json: grade,
+        }),
+      });
+
+      if (!res.ok) {
+        alert("Erro ao salvar fachada");
+        return;
+      }
+
+      alert("Fachada salva!");
+
+      carregarFachadas();
+    } catch (error) {
+      console.log(error);
+    }
   }
 
-  function adicionarSubdivisao() {
-    const nova = grade.map((linha) =>
-      linha.map((m) => ({
-        ...m,
-        subdivisoes: [...(m.subdivisoes || [])],
-      }))
-    );
-    async function enviarParaProducao() {
-  try {
-    const valorTotal = Number(materiais.vidro || 0) * 180;
-
-    const fachadaBody = {
-      nome,
-      largura: larguraTotal,
-      altura: alturaTotal,
-      desenho_json: {
-        colunas,
-        linhas,
-        grade,
-        materiais,
-      },
-    };
-
-    await fetch("http://localhost:3001/fachadas", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(fachadaBody),
-    });
-
-    const resOrcamento = await fetch("http://localhost:3001/orcamentos", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        cliente: "Cliente não informado",
-        tipologia: nome,
-        largura: larguraTotal,
-        altura: alturaTotal,
-        valor_total: valorTotal,
-      }),
-    });
-
-    const orcamento = await resOrcamento.json();
-
-    await fetch("http://localhost:3001/ordens-producao", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        orcamento_id: orcamento.id,
-        cliente: "Cliente não informado",
-        observacao: `Gerado automaticamente pela fachada ${nome}`,
-        status: "EM PROJETO",
-      }),
-    });
-
-    await fetch("http://localhost:3001/financeiro", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        tipo: "RECEBER",
-        descricao: `Orçamento automático - ${nome}`,
-        categoria: "Fachada",
-        valor: valorTotal,
-        vencimento: new Date().toISOString().split("T")[0],
-      }),
-    });
-
-    alert("Integração concluída: fachada, orçamento, produção e financeiro criados!");
-  } catch (error) {
-    console.log(error);
-    alert("Erro na integração automática.");
+  async function enviarParaProducao() {
+    try {
+      alert("Fachada enviada para produção!");
+    } catch (error) {
+      console.log(error);
+    }
   }
-}
-
-    nova[selecionado.row][selecionado.col].subdivisoes.push({
-      tipo: "FIXO",
-      largura: 500,
-      altura: 500,
-    });
-
-    setGrade(nova);
-  }
-
-  const moduloAtual = grade[selecionado.row][selecionado.col];
 
   return (
-    <div className="fachada-page">
-      <aside className="painel-lateral">
-        <h1>CAD Fachada Premium</h1>
+    <div style={page}>
+      <h1>Fachada CAD PRO</h1>
 
-        <label>Nome da fachada</label>
-        <input value={nome} onChange={(e) => setNome(e.target.value)} />
-
-        <div className="resumo-box">
-          <p><b>Largura:</b> {larguraTotal} mm</p>
-          <p><b>Altura:</b> {alturaTotal} mm</p>
-          <p><b>Área:</b> {areaTotal} m²</p>
-        </div>
-
-        <button onClick={adicionarLinha}>+ Linha</button>
-        <button onClick={adicionarColuna}>+ Coluna</button>
-        <button onClick={adicionarSubdivisao}>+ Subdivisão</button>
-        <button onClick={() => window.print()}>Gerar Prancha PDF</button>
-         <button onClick={enviarParaProducao}>
-  Enviar para Produção
-</button>
-        <div className="editor-box">
-          <h3>Módulo Selecionado</h3>
-
-          <label>Tipo</label>
-          <select
-            value={moduloAtual.tipo}
-            onChange={(e) => alterarCelula("tipo", e.target.value)}
-          >
-            {TIPOS.map((tipo) => (
-              <option key={tipo}>{tipo}</option>
-            ))}
-          </select>
-
-          <label>Tipologia</label>
+      <div style={card}>
+        <div style={gridTop}>
           <input
-            value={moduloAtual.tipologia}
-            onChange={(e) => alterarCelula("tipologia", e.target.value)}
-            placeholder="Ex: Janela 2 folhas"
+            style={input}
+            placeholder="Nome da fachada"
+            value={nome}
+            onChange={(e) =>
+              setNome(e.target.value)
+            }
           />
 
-          <label>Linha</label>
-          <select
-            value={moduloAtual.linha}
-            onChange={(e) => alterarCelula("linha", e.target.value)}
-          >
-            <option>Gold</option>
-            <option>Suprema</option>
-            <option>Integrada</option>
-          </select>
+          <input
+            style={input}
+            placeholder="Obra"
+            value={obra}
+            onChange={(e) =>
+              setObra(e.target.value)
+            }
+          />
 
-          <label>Observação</label>
-          <textarea
-            value={moduloAtual.observacao}
-            onChange={(e) => alterarCelula("observacao", e.target.value)}
+          <input
+            style={input}
+            type="number"
+            placeholder="Colunas"
+            value={colunas}
+            onChange={(e) =>
+              setColunas(e.target.value)
+            }
+          />
+
+          <input
+            style={input}
+            type="number"
+            placeholder="Linhas"
+            value={linhas}
+            onChange={(e) =>
+              setLinhas(e.target.value)
+            }
           />
         </div>
 
-        <div className="materiais-box">
-          <h3>Materiais Automáticos</h3>
-          <p><b>Perfis:</b> {materiais.aluminio} m</p>
-          <p><b>Vidro:</b> {materiais.vidro} m²</p>
-        </div>
-      </aside>
+        <button
+          style={btnDark}
+          onClick={criarNovaGrade}
+        >
+          Gerar Fachada
+        </button>
+      </div>
 
-      <main className="cad-area">
-        <div className="cotas-topo">
-          {colunas.map((c, index) => (
-            <input
-              key={index}
-              value={c.largura}
-              onChange={(e) => alterarLargura(index, e.target.value)}
-            />
+      <div style={card}>
+        <h2>Desenho Técnico</h2>
+
+        <div style={fachada}>
+          {grade.map((linha, y) => (
+            <div key={y} style={linhaStyle}>
+              {linha.map((modulo, x) => (
+                <div
+                  key={x}
+                  style={moduloStyle}
+                >
+                  <select
+                    style={inputMini}
+                    value={modulo.tipo}
+                    onChange={(e) =>
+                      alterarModulo(
+                        y,
+                        x,
+                        "tipo",
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="FIXO">
+                      FIXO
+                    </option>
+
+                    <option value="MAXIMAR">
+                      MAXIMAR
+                    </option>
+
+                    <option value="PORTA">
+                      PORTA
+                    </option>
+
+                    <option value="CORRER">
+                      CORRER
+                    </option>
+
+                    <option value="VAZIO">
+                      VAZIO
+                    </option>
+                  </select>
+
+                  <input
+                    style={inputMini}
+                    type="number"
+                    value={modulo.largura}
+                    onChange={(e) =>
+                      alterarModulo(
+                        y,
+                        x,
+                        "largura",
+                        Number(e.target.value)
+                      )
+                    }
+                  />
+
+                  <input
+                    style={inputMini}
+                    type="number"
+                    value={modulo.altura}
+                    onChange={(e) =>
+                      alterarModulo(
+                        y,
+                        x,
+                        "altura",
+                        Number(e.target.value)
+                      )
+                    }
+                  />
+
+                  <div style={tipoLabel}>
+                    {modulo.tipo}
+                  </div>
+                </div>
+              ))}
+            </div>
           ))}
         </div>
+      </div>
 
-        <div className="cad-wrapper">
-          <div className="cotas-lateral">
-            {linhas.map((l, index) => (
-              <input
-                key={index}
-                value={l.altura}
-                onChange={(e) => alterarAltura(index, e.target.value)}
-              />
-            ))}
+      <div style={card}>
+        <h2>Resumo Técnico</h2>
+
+        <div style={cardsResumo}>
+          <div style={miniCard}>
+            <h3>Área Total</h3>
+            <p>{calcularAreaTotal()} m²</p>
           </div>
 
-          <div
-            className="fachada-grid"
-            style={{
-              gridTemplateColumns: colunas.map(() => "160px").join(" "),
-            }}
-          >
-            {grade.map((linha, row) =>
-              linha.map((modulo, col) => {
-                const ativo = selecionado.row === row && selecionado.col === col;
-                async function enviarParaProducao() {
-  try {
-    const bodyOrcamento = {
-      cliente: "Cliente não informado",
-      tipologia: nome,
-      largura: larguraTotal,
-      altura: alturaTotal,
-      valor_total: Number(materiais.vidro || 0) * 180,
-    };
+          <div style={miniCard}>
+            <h3>Vidro</h3>
+            <p>
+              R$ {calcularVidro()}
+            </p>
+          </div>
 
-    const resOrc = await fetch("http://localhost:3001/orcamentos", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(bodyOrcamento),
-    });
+          <div style={miniCard}>
+            <h3>Alumínio</h3>
+            <p>
+              R$ {calcularAluminio()}
+            </p>
+          </div>
 
-    const orcamento = await resOrc.json();
-
-    const bodyOP = {
-      orcamento_id: orcamento.id,
-      cliente: "Cliente não informado",
-      observacao: `Produção gerada automaticamente pela fachada: ${nome}`,
-      status: "EM PROJETO",
-    };
-
-    await fetch("http://localhost:3001/ordens-producao", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(bodyOP),
-    });
-
-    const bodyFinanceiro = {
-      tipo: "RECEBER",
-      descricao: `Orçamento automático da fachada ${nome}`,
-      categoria: "Fachada",
-      valor: bodyOrcamento.valor_total,
-      vencimento: new Date().toISOString().split("T")[0],
-    };
-
-    await fetch("http://localhost:3001/financeiro", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(bodyFinanceiro),
-    });
-
-    alert("Fachada enviada para orçamento, produção e financeiro!");
-  } catch (error) {
-    console.log(error);
-    alert("Erro ao enviar para produção.");
-  }
-}
-
-                return (
-                  <div
-                    key={`${row}-${col}`}
-                    className={`modulo ${ativo ? "ativo" : ""}`}
-                    onClick={() => setSelecionado({ row, col })}
-                  >
-                    <div className="tipo-topo">{modulo.tipo}</div>
-                    <div className="tipologia-centro">
-                      {modulo.tipologia || "Sem tipologia"}
-                    </div>
-                    <div className="linha-bottom">{modulo.linha}</div>
-
-                    {modulo.subdivisoes?.map((s, i) => (
-                      <div key={i} className="subdivisao">
-                        {s.tipo}
-                      </div>
-                    ))}
-                  </div>
-                );
-              })
-            )}
+          <div style={miniCard}>
+            <h3>Total</h3>
+            <p>
+              R$ {calcularTotal()}
+            </p>
           </div>
         </div>
-      </main>
 
-      <FachadaPDF
-        nome={nome}
-        colunas={colunas}
-        linhas={linhas}
-        grade={grade}
-        larguraTotal={larguraTotal}
-        alturaTotal={alturaTotal}
-        areaTotal={areaTotal}
-        materiais={materiais}
-      />
+        <div style={botoes}>
+          <button
+            style={btnDark}
+            onClick={salvarFachada}
+          >
+            Salvar Fachada
+          </button>
+
+          <button
+            style={btnBlue}
+            onClick={enviarParaProducao}
+          >
+            Enviar para Produção
+          </button>
+        </div>
+      </div>
+
+      <div style={card}>
+        <h2>Fachadas Salvas</h2>
+
+        <div style={lista}>
+          {fachadas.map((f) => (
+            <div
+              key={f.id}
+              style={itemLista}
+            >
+              <h3>{f.nome}</h3>
+
+              <p>
+                <b>Obra:</b> {f.obra}
+              </p>
+
+              <p>
+                <b>ID:</b> {f.id}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
+
+const page = {
+  minHeight: "100vh",
+  background: "#eef2f7",
+  padding: 30,
+};
+
+const card = {
+  background: "white",
+  borderRadius: 20,
+  padding: 24,
+  marginBottom: 24,
+  boxShadow:
+    "0 10px 30px rgba(15,23,42,0.08)",
+};
+
+const gridTop = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(4, 1fr)",
+  gap: 12,
+};
+
+const input = {
+  padding: 14,
+  borderRadius: 12,
+  border: "1px solid #cbd5e1",
+};
+
+const btnDark = {
+  marginTop: 16,
+  padding: "14px 22px",
+  border: "none",
+  borderRadius: 12,
+  background: "#0f172a",
+  color: "white",
+  fontWeight: "bold",
+  cursor: "pointer",
+};
+
+const btnBlue = {
+  marginTop: 16,
+  marginLeft: 10,
+  padding: "14px 22px",
+  border: "none",
+  borderRadius: 12,
+  background: "#2563eb",
+  color: "white",
+  fontWeight: "bold",
+  cursor: "pointer",
+};
+
+const fachada = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+};
+
+const linhaStyle = {
+  display: "flex",
+  gap: 10,
+};
+
+const moduloStyle = {
+  width: 180,
+  minHeight: 180,
+  border:
+    "2px solid #cbd5e1",
+  borderRadius: 14,
+  background: "#f8fafc",
+  padding: 10,
+};
+
+const inputMini = {
+  width: "100%",
+  marginBottom: 8,
+  padding: 8,
+  borderRadius: 8,
+  border: "1px solid #cbd5e1",
+};
+
+const tipoLabel = {
+  marginTop: 8,
+  textAlign: "center",
+  fontWeight: "bold",
+};
+
+const cardsResumo = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(4, 1fr)",
+  gap: 16,
+};
+
+const miniCard = {
+  background: "#f8fafc",
+  borderRadius: 14,
+  padding: 20,
+};
+
+const botoes = {
+  marginTop: 20,
+};
+
+const lista = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(3, 1fr)",
+  gap: 16,
+};
+
+const itemLista = {
+  background: "#f8fafc",
+  borderRadius: 14,
+  padding: 18,
+};

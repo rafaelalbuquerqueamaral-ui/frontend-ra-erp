@@ -42,7 +42,7 @@ const PERFIS_PADRAO = [
 ];
 
 export default function ImportadorPerfis() {
-  const [lista, setLista] = useState(PERFIS_PADRAO);
+  const [lista] = useState(PERFIS_PADRAO);
 
   async function importarTodos() {
     for (const perfil of lista) {
@@ -71,9 +71,6 @@ export default function ImportadorPerfis() {
   return (
     <div style={page}>
       <h1>Importador Industrial de Perfis</h1>
-      <p style={{ color: "#64748b" }}>
-        Importe perfis técnicos por fabricante, linha, peso kg/m e valor por kg.
-      </p>
 
       <div style={card}>
         <button style={btn} onClick={importarTodos}>
@@ -101,12 +98,7 @@ export default function ImportadorPerfis() {
                 <td style={td}>{p.codigo}</td>
                 <td style={td}>{p.descricao}</td>
                 <td style={td}>{p.peso_kg_m}</td>
-                <td style={td}>
-                  {Number(p.valor_kg).toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-                </td>
+                <td style={td}>R$ {p.valor_kg}</td>
                 <td style={td}>{p.acabamento}</td>
               </tr>
             ))}
@@ -128,7 +120,6 @@ const card = {
   borderRadius: 20,
   padding: 24,
   marginTop: 20,
-  boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
 };
 
 const btn = {
