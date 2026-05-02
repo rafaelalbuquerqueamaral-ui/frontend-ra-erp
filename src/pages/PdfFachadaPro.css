@@ -1,0 +1,131 @@
+.pdf-fachada {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #pdf-fachada,
+  #pdf-fachada * {
+    visibility: visible;
+  }
+
+  #pdf-fachada {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+    padding: 30px;
+    font-family: Arial, sans-serif;
+    color: #111827;
+  }
+
+  .pdf-header {
+    border-bottom: 3px solid #111827;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+  }
+
+  .pdf-header h1 {
+    margin: 0;
+    font-size: 28px;
+  }
+
+  .pdf-header p {
+    margin: 4px 0 0;
+  }
+
+  .pdf-info {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 25px;
+  }
+
+  .pdf-prancha {
+    margin-bottom: 30px;
+  }
+
+  .pdf-grid {
+    display: grid;
+    gap: 4px;
+  }
+
+  .pdf-modulo {
+    border: 2px solid #64748b;
+    width: 90px;
+    height: 90px;
+    position: relative;
+    background: #f8fafc;
+  }
+
+  .pdf-modulo span {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    font-size: 11px;
+  }
+
+  .pdf-modulo small {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    font-size: 10px;
+  }
+
+  .pdf-modulo.FIXO {
+    background: #dbeafe;
+  }
+
+  .pdf-modulo.MAX {
+    background: #bfdbfe;
+  }
+
+  .pdf-modulo.PORTA {
+    background: #fde68a;
+  }
+
+  .pdf-box {
+    margin-bottom: 24px;
+  }
+
+  .pdf-box h2 {
+    margin-bottom: 10px;
+  }
+
+  .pdf-box table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .pdf-box td {
+    padding: 10px;
+    border-bottom: 1px solid #d1d5db;
+  }
+
+  .pdf-box td:last-child {
+    text-align: right;
+    font-weight: bold;
+  }
+
+  .pdf-box .total td {
+    background: #111827;
+    color: white;
+    font-size: 18px;
+  }
+
+  .pdf-footer {
+    margin-top: 70px;
+    text-align: center;
+  }
+
+  .assinatura {
+    width: 300px;
+    border-top: 1px solid #111827;
+    margin: auto;
+    margin-bottom: 8px;
+  }
+}

@@ -1,0 +1,152 @@
+.fachada-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f1f5f9;
+  font-family: Arial, sans-serif;
+}
+
+.painel {
+  width: 280px;
+  background: white;
+  padding: 20px;
+  border-right: 1px solid #dbe2ea;
+}
+
+.painel h2 {
+  margin-top: 0;
+  color: #0f172a;
+}
+
+.painel label {
+  display: block;
+  margin-top: 14px;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+.painel input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+}
+
+.painel button {
+  margin-top: 18px;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  background: #111827;
+  color: white;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.legenda {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #475569;
+}
+
+.prancha-area {
+  flex: 1;
+  padding: 30px;
+  overflow: auto;
+}
+
+.cotas-topo {
+  display: grid;
+  gap: 6px;
+  margin-left: 60px;
+  margin-bottom: 8px;
+}
+
+.cotas-topo div {
+  text-align: center;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.prancha {
+  display: flex;
+}
+
+.cotas-lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-right: 10px;
+}
+
+.cotas-lateral div {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.grid {
+  display: grid;
+  gap: 4px;
+  background: #94a3b8;
+  padding: 4px;
+}
+
+.modulo {
+  width: 120px;
+  height: 120px;
+  background: #dbeafe;
+  border: 2px solid #94a3b8;
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modulo span {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 11px;
+  color: #334155;
+}
+
+.modulo.FIXO {
+  background: #ecfeff;
+}
+
+.modulo.MAX {
+  background: #e0f2fe;
+}
+
+.modulo.PORTA {
+  background: #fef3c7;
+}
+
+.modulo.VAZIO {
+  background: #f1f5f9;
+}
+
+.max-desenho {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.linha-max {
+  position: absolute;
+  width: 2px;
+  height: 100%;
+  background: #2563eb;
+  left: 50%;
+  transform: rotate(25deg);
+}
+
+.porta-desenho {
+  width: 70%;
+  height: 90%;
+  border: 2px solid #92400e;
+}

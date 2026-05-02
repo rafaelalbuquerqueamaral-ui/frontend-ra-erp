@@ -1,0 +1,168 @@
+.fachada-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f1f5f9;
+  font-family: Arial, sans-serif;
+}
+
+.painel-lateral {
+  width: 340px;
+  background: #111827;
+  color: white;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.painel-lateral h1 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.painel-lateral label {
+  display: block;
+  margin-top: 12px;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.painel-lateral input,
+.painel-lateral select,
+.painel-lateral textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  box-sizing: border-box;
+}
+
+.painel-lateral textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.painel-lateral button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #22c55e;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.painel-lateral button:hover {
+  background: #16a34a;
+}
+
+.resumo-box,
+.editor-box,
+.materiais-box {
+  margin-top: 22px;
+  background: rgba(255,255,255,0.08);
+  padding: 15px;
+  border-radius: 12px;
+}
+
+.cad-area {
+  flex: 1;
+  padding: 25px;
+  overflow: auto;
+}
+
+.cotas-topo {
+  display: flex;
+  gap: 10px;
+  margin-left: 70px;
+  margin-bottom: 10px;
+}
+
+.cotas-topo input {
+  width: 160px;
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+}
+
+.cad-wrapper {
+  display: flex;
+}
+
+.cotas-lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-right: 10px;
+}
+
+.cotas-lateral input {
+  width: 60px;
+  height: 160px;
+  text-align: center;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+}
+
+.fachada-grid {
+  display: grid;
+  gap: 10px;
+  background: #64748b;
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.modulo {
+  width: 160px;
+  height: 160px;
+  background: #dbeafe;
+  border: 3px solid transparent;
+  position: relative;
+  cursor: pointer;
+  transition: 0.2s;
+  border-radius: 10px;
+}
+
+.modulo:hover {
+  transform: scale(1.02);
+}
+
+.modulo.ativo {
+  border-color: #22c55e;
+}
+
+.tipo-topo {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.tipologia-centro {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 90%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.linha-bottom {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  font-size: 11px;
+}
+
+.subdivisao {
+  margin: 5px;
+  padding: 4px;
+  background: rgba(255,255,255,0.8);
+  border: 1px solid #94a3b8;
+  border-radius: 4px;
+  font-size: 10px;
+}
