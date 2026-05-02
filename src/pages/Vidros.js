@@ -1,160 +1,204 @@
 import { useEffect, useState } from "react";
+import api from "../services/api";
 
-export default function VidrosPRO() {
-  const API = "http://localhost:3001";
-  const [dados, setDados] = useState([]);
-  const [busca, setBusca] = useState("");
+export default function Vidros() {
+  const [vidros, setVidros] = useState([]);
+
+  const [form, setForm] = useState({
+    nome: "",
+    tipo: "",
+    espessura: "",
+    cor: "",
+    valor_m2: "",
+    observacao: "",
+  });
 
   useEffect(() => {
-    carregar();
+    carregarVidros();
   }, []);
 
-  function carregar() {
-    fetch(API + "/vidros")
-      .then(r => r.json())
-      .then(setDados);
+  async function carregarVidros() {
+    try {
+      const res = await api.get("/vidros");
+      setVidros(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.log(error);
+      setVidros([]);
+    }
   }
 
-  const filtrado = dados.filter(v =>
-    v.descricao?.toLowerCase().includes(busca.toLowerCase())
-  );
+  async function salvarVidro(e) {
+    e.preventDefault();
+
+    try {
+      await api.post("/vidros", form);
+
+      setForm({
+        nome: "",
+        tipo: "",
+        espessura: "",
+        cor: "",
+        valor_m2: "",
+        observacao: "",
+      });
+
+      carregarVidros();
+      alert("Vidro salvo com sucesso!");
+    } catch (error) {
+      console.log(error);
+      alert("Erro ao salvar vidro.");
+    }
+  }
+
+  function dinheiro(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
 
   return (
-    <div style={{ padding: 20, background: "#f4f6f9", height: "100vh" }}>
+    <div style={page}>
+      <h1>Vidros PRO Online</h1>
+      <p style={{ color: "#64748b" }}>
+        Cadastro técnico de vidros com valor por m² para orçamento automático.
+      </p>
 
-      {/* TOPO */}
-      <div style={{
-        display: "flex",
-        gap: 10,
-        marginBottom: 15,
-        alignItems: "center"
-      }}>
-        <button className="btn">
-          + Novo Vidro / Chapa
-        </button>
+      <form style={card} onSubmit={salvarVidro}>
+        <h2>Novo Vidro</h2>
 
-        <button className="btn-sec">
-          💰 Ajustar Preços
-        </button>
+        <div style={grid}>
+          <input
+            style={input}
+            placeholder="Nome"
+            value={form.nome}
+            onChange={(e) => setForm({ ...form, nome: e.target.value })}
+          />
 
-        <input
-          placeholder="Pesquisar..."
-          value={busca}
-          onChange={e => setBusca(e.target.value)}
-          className="input"
-        />
-      </div>
+          <input
+            style={input}
+            placeholder="Tipo: temperado, laminado..."
+            value={form.tipo}
+            onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+          />
 
-      {/* TABELA */}
-      <div className="card">
-        <table className="tabela">
+          <input
+            style={input}
+            placeholder="Espessura: 8mm, 10mm..."
+            value={form.espessura}
+            onChange={(e) => setForm({ ...form, espessura: e.target.value })}
+          />
+
+          <input
+            style={input}
+            placeholder="Cor: incolor, fumê..."
+            value={form.cor}
+            onChange={(e) => setForm({ ...form, cor: e.target.value })}
+          />
+
+          <input
+            style={input}
+            type="number"
+            placeholder="Valor m²"
+            value={form.valor_m2}
+            onChange={(e) => setForm({ ...form, valor_m2: e.target.value })}
+          />
+
+          <input
+            style={input}
+            placeholder="Observação técnica"
+            value={form.observacao}
+            onChange={(e) => setForm({ ...form, observacao: e.target.value })}
+          />
+        </div>
+
+        <button style={btn}>Salvar Vidro</button>
+      </form>
+
+      <div style={card}>
+        <h2>Vidros cadastrados</h2>
+
+        <table style={table}>
           <thead>
             <tr>
-              <th>Código</th>
-              <th>Descrição</th>
-              <th>Espessura</th>
-              <th>Custo m²</th>
-              <th>Categoria</th>
-              <th>Grupo</th>
-              <th>Largura</th>
-              <th>Altura</th>
-              <th>Área Min</th>
-              <th>Arred</th>
-              <th>Ações</th>
+              <th style={th}>Nome</th>
+              <th style={th}>Tipo</th>
+              <th style={th}>Espessura</th>
+              <th style={th}>Cor</th>
+              <th style={th}>Valor m²</th>
+              <th style={th}>Observação</th>
             </tr>
           </thead>
 
           <tbody>
-            {filtrado.map((v, i) => (
-              <tr key={v.id} className={i === 0 ? "linha-ativa" : ""}>
-                <td>{v.codigo}</td>
-                <td>{v.descricao}</td>
-                <td>{v.espessura} mm</td>
-                <td>R$ {v.custo_m2}</td>
-                <td>{v.categoria}</td>
-                <td>{v.grupo}</td>
-                <td>{v.largura_padrao}</td>
-                <td>{v.altura_padrao}</td>
-                <td>{v.area_min}</td>
-                <td>{v.arredondamento}</td>
-
-                <td>
-                  <button className="acoes">⋮</button>
-                </td>
+            {vidros.map((v) => (
+              <tr key={v.id}>
+                <td style={td}>{v.nome}</td>
+                <td style={td}>{v.tipo}</td>
+                <td style={td}>{v.espessura}</td>
+                <td style={td}>{v.cor}</td>
+                <td style={td}>{dinheiro(v.valor_m2)}</td>
+                <td style={td}>{v.observacao}</td>
               </tr>
             ))}
           </tbody>
         </table>
+
+        {vidros.length === 0 && <p>Nenhum vidro cadastrado.</p>}
       </div>
-
-      {/* CSS INTERNO */}
-      <style>{`
-        .card {
-          background: white;
-          border-radius: 10px;
-          padding: 10px;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-
-        .tabela {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 14px;
-        }
-
-        .tabela th {
-          background: #e9f0e4;
-          text-align: left;
-          padding: 10px;
-          font-weight: bold;
-        }
-
-        .tabela td {
-          padding: 10px;
-          border-bottom: 1px solid #eee;
-        }
-
-        .tabela tr:hover {
-          background: #f5f5f5;
-        }
-
-        .linha-ativa {
-          background: #f7e98f !important;
-        }
-
-        .btn {
-          background: #2e7d32;
-          color: white;
-          border: none;
-          padding: 8px 12px;
-          border-radius: 5px;
-          cursor: pointer;
-        }
-
-        .btn-sec {
-          background: #1976d2;
-          color: white;
-          border: none;
-          padding: 8px 12px;
-          border-radius: 5px;
-          cursor: pointer;
-        }
-
-        .input {
-          padding: 8px;
-          border-radius: 5px;
-          border: 1px solid #ccc;
-          width: 200px;
-        }
-
-        .acoes {
-          background: #ddd;
-          border: none;
-          padding: 5px 10px;
-          border-radius: 5px;
-          cursor: pointer;
-        }
-      `}</style>
     </div>
   );
 }
+
+const page = {
+  minHeight: "100vh",
+  background: "#eef2f7",
+  padding: 30,
+};
+
+const card = {
+  background: "white",
+  borderRadius: 20,
+  padding: 24,
+  marginTop: 22,
+  boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
+};
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, 1fr)",
+  gap: 12,
+};
+
+const input = {
+  padding: 13,
+  borderRadius: 12,
+  border: "1px solid #cbd5e1",
+};
+
+const btn = {
+  marginTop: 18,
+  padding: "15px 24px",
+  border: "none",
+  borderRadius: 12,
+  background: "#0f172a",
+  color: "white",
+  fontWeight: "bold",
+  cursor: "pointer",
+};
+
+const table = {
+  width: "100%",
+  borderCollapse: "collapse",
+};
+
+const th = {
+  textAlign: "left",
+  padding: 12,
+  background: "#f1f5f9",
+};
+
+const td = {
+  padding: 12,
+  borderBottom: "1px solid #e5e7eb",
+};
