@@ -166,3 +166,83 @@
   border-radius: 4px;
   font-size: 10px;
 }
+@media print {
+
+  .print-only {
+    display: block;
+  }
+
+  .prancha {
+    background: white;
+    padding: 30px;
+    font-family: Arial;
+  }
+
+  .cabecalho {
+    display: flex;
+    justify-content: space-between;
+    border: 2px solid black;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+
+  .linha-cota-horizontal {
+    display: flex;
+    margin-left: 70px;
+  }
+
+  .cota-topo {
+    flex: 1;
+    text-align: center;
+    border-top: 2px solid black;
+    padding-top: 5px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .desenho-area {
+    display: flex;
+  }
+
+  .coluna-cotas {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cota-lateral {
+    height: 140px;
+    width: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 2px solid black;
+    font-size: 12px;
+    font-weight: bold;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  .desenho-grade {
+    flex: 1;
+    border: 3px solid black;
+  }
+
+  .linha-print {
+    display: flex;
+  }
+
+  .modulo-print {
+    flex: 1;
+    height: 140px;
+    border: 1.5px solid black;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tipo-centro {
+    font-size: 20px;
+    font-weight: bold;
+  }
+}
