@@ -1,11 +1,8 @@
-import React, { useEffect, useState } from "react";
-import "./OrcamentoPro.css";
-
-const API = "http://localhost:3001";
+import { useEffect, useState } from "react";
+import api from "../services/api";
 
 export default function OrcamentoPro() {
   const [tipologias, setTipologias] = useState([]);
-  const [tipSelecionada, setTipSelecionada] = useState(null);
   const [resultado, setResultado] = useState(null);
 
   const [form, setForm] = useState({
@@ -20,18 +17,16 @@ export default function OrcamentoPro() {
 
   async function carregarTipologias() {
     try {
-      const res = await fetch(`${API}/tipologias`);
-      const data = await res.json();
-      setTipologias(Array.isArray(data) ? data : []);
-    } catch {
+      const res = await api.get("/tipologias");
+      setTipologias(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.log(error);
       setTipologias([]);
     }
   }
 
   function selecionarTipologia(id) {
     const tip = tipologias.find((t) => Number(t.id) === Number(id));
-
-    setTipSelecionada(tip || null);
 
     setForm({
       tipologia_id: id,
@@ -45,31 +40,49 @@ export default function OrcamentoPro() {
   async function calcular(e) {
     e.preventDefault();
 
-    if (!form.tipologia_id || !form.largura || !form.altura) {
-      alert("Selecione a tipologia e informe as medidas.");
+    const tip = tipologias.find(
+      (t) => Number(t.id) === Number(form.tipologia_id)
+    );
+
+    if (!tip) {
+      alert("Selecione uma tipologia.");
       return;
     }
 
-    const res = await fetch(`${API}/orcamento-pro/calcular`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        tipologia_id: Number(form.tipologia_id),
-        largura: Number(form.largura),
-        altura: Number(form.altura),
-      }),
+    const largura = Number(form.largura || 0);
+    const altura = Number(form.altura || 0);
+    const area = (largura * altura) / 1000000;
+
+    const valorVidroM2 = Number(tip.valor_vidro_m2 || 180);
+    const valorPerfilM = Number(tip.valor_perfil_m || 95);
+    const valorAcessorios = Number(tip.valor_acessorios || 80);
+    const margem = 1.35;
+
+    const perimetro = ((largura * 2) + (altura * 2)) / 1000;
+
+    const totalVidro = area * valorVidroM2;
+    const totalPerfis = perimetro * valorPerfilM;
+    const custoTotal = totalVidro + totalPerfis + valorAcessorios;
+    const vendaTotal = custoTotal * margem;
+
+    setResultado({
+      tipologia: tip.nome,
+      linha: tip.linha,
+      largura,
+      altura,
+      area,
+      perimetro,
+      vidro: tip.vidro || "Vidro padrão",
+      perfil: tip.perfil || "Perfil padrão",
+      acessorios: tip.acessorios || "Acessórios padrão",
+      totalVidro,
+      totalPerfis,
+      totalAcessorios: valorAcessorios,
+      custoTotal,
+      vendaTotal,
+      imagem: tip.imagem,
+      observacao: tip.observacao_tecnica,
     });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.erro || "Erro ao calcular orçamento.");
-      return;
-    }
-
-    setResultado(data);
   }
 
   async function salvarOrcamento() {
@@ -78,28 +91,20 @@ export default function OrcamentoPro() {
       return;
     }
 
-    const body = {
-      cliente: "Cliente não informado",
-      tipologia: resultado.tipologia,
-      largura: resultado.largura,
-      altura: resultado.altura,
-      valor_total: resultado.vendaTotal,
-    };
+    try {
+      await api.post("/orcamentos", {
+        cliente: "Cliente não informado",
+        tipologia: resultado.tipologia,
+        largura: resultado.largura,
+        altura: resultado.altura,
+        valor_total: resultado.vendaTotal,
+      });
 
-    const res = await fetch(`${API}/orcamentos`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
+      alert("Orçamento salvo online!");
+    } catch (error) {
+      console.log(error);
       alert("Erro ao salvar orçamento.");
-      return;
     }
-
-    alert("Orçamento salvo com sucesso!");
   }
 
   function dinheiro(valor) {
@@ -109,374 +114,226 @@ export default function OrcamentoPro() {
     });
   }
 
-  function gerarListaCorte() {
-    if (!resultado?.listaPerfis) return [];
-
-    const tamanhoBarra = 6000;
-    const perdaSerra = 3;
-    let pecas = [];
-
-    resultado.listaPerfis.forEach((p) => {
-      const medidaMm = Math.round(Number(p.medida_metro || 0) * 1000);
-
-      for (let i = 0; i < Number(p.quantidade || 1); i++) {
-        pecas.push({
-          perfil: p.nome,
-          medida: medidaMm,
-        });
-      }
-    });
-
-    pecas.sort((a, b) => b.medida - a.medida);
-
-    const barras = [];
-
-    pecas.forEach((peca) => {
-      let encaixou = false;
-
-      for (let barra of barras) {
-        const usado = barra.pecas.reduce(
-          (s, p) => s + p.medida + perdaSerra,
-          0
-        );
-
-        if (usado + peca.medida + perdaSerra <= tamanhoBarra) {
-          barra.pecas.push(peca);
-          encaixou = true;
-          break;
-        }
-      }
-
-      if (!encaixou) {
-        barras.push({ pecas: [peca] });
-      }
-    });
-
-    return barras.map((barra, index) => {
-      const usado = barra.pecas.reduce(
-        (s, p) => s + p.medida + perdaSerra,
-        0
-      );
-
-      return {
-        barra: index + 1,
-        pecas: barra.pecas,
-        usado,
-        sobra: tamanhoBarra - usado,
-        aproveitamento: (usado / tamanhoBarra) * 100,
-      };
-    });
-  }
-
-  const listaCorte = gerarListaCorte();
-
   return (
-    <div className="orc-page">
-      <div className="tela-normal">
-        <div className="orc-header">
-          <h1>Orçamento Técnico Premium</h1>
-          <p>Orçamento com imagem da tipologia, memória técnica, materiais e PDF.</p>
+    <div style={page}>
+      <h1>Orçamento Automático REAL</h1>
+      <p style={{ color: "#64748b" }}>
+        Puxa tipologia, vidro, perfil, acessórios e calcula automaticamente.
+      </p>
+
+      <form style={card} onSubmit={calcular}>
+        <h2>Novo Orçamento</h2>
+
+        <div style={grid}>
+          <select
+            style={input}
+            value={form.tipologia_id}
+            onChange={(e) => selecionarTipologia(e.target.value)}
+          >
+            <option value="">Selecione a tipologia</option>
+            {tipologias.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nome} - {t.linha}
+              </option>
+            ))}
+          </select>
+
+          <input
+            style={input}
+            type="number"
+            placeholder="Largura mm"
+            value={form.largura}
+            onChange={(e) => setForm({ ...form, largura: e.target.value })}
+          />
+
+          <input
+            style={input}
+            type="number"
+            placeholder="Altura mm"
+            value={form.altura}
+            onChange={(e) => setForm({ ...form, altura: e.target.value })}
+          />
+
+          <button style={btn}>Calcular</button>
         </div>
+      </form>
 
-        <form className="orc-card" onSubmit={calcular}>
-          <h2>Novo Orçamento</h2>
-
-          <div className="orc-grid">
-            <select
-              value={form.tipologia_id}
-              onChange={(e) => selecionarTipologia(e.target.value)}
-            >
-              <option value="">Selecione a tipologia</option>
-
-              {tipologias.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nome} - {t.linha}
-                </option>
-              ))}
-            </select>
-
-            <input
-              type="number"
-              placeholder="Largura em mm"
-              value={form.largura}
-              onChange={(e) => setForm({ ...form, largura: e.target.value })}
+      {resultado && (
+        <>
+          <div style={resumo}>
+            <Card titulo="Área" valor={`${resultado.area.toFixed(2)} m²`} />
+            <Card titulo="Vidro" valor={dinheiro(resultado.totalVidro)} />
+            <Card titulo="Perfis" valor={dinheiro(resultado.totalPerfis)} />
+            <Card
+              titulo="Acessórios"
+              valor={dinheiro(resultado.totalAcessorios)}
             />
-
-            <input
-              type="number"
-              placeholder="Altura em mm"
-              value={form.altura}
-              onChange={(e) => setForm({ ...form, altura: e.target.value })}
+            <Card
+              titulo="Venda Final"
+              valor={dinheiro(resultado.vendaTotal)}
+              destaque
             />
           </div>
 
-          {tipSelecionada && (
-            <div className="tip-preview">
-              {tipSelecionada.imagem ? (
+          <div style={card}>
+            <h2>Memória Técnica</h2>
+
+            <div style={memoriaGrid}>
+              {resultado.imagem && (
                 <img
-                  src={`${API}/uploads/${tipSelecionada.imagem}`}
-                  alt={tipSelecionada.nome}
+                  src={`https://backend-esquadrias.onrender.com${resultado.imagem}`}
+                  alt=""
+                  style={img}
                 />
-              ) : (
-                <div className="sem-img">Sem imagem</div>
               )}
 
               <div>
-                <h3>{tipSelecionada.nome}</h3>
-                <p><b>Linha:</b> {tipSelecionada.linha}</p>
-                <p><b>Padrão:</b> {tipSelecionada.largura_padrao} x {tipSelecionada.altura_padrao} mm</p>
-                <p>{tipSelecionada.observacao_tecnica}</p>
+                <p><b>Tipologia:</b> {resultado.tipologia}</p>
+                <p><b>Linha:</b> {resultado.linha}</p>
+                <p><b>Medidas:</b> {resultado.largura} x {resultado.altura} mm</p>
+                <p><b>Perímetro:</b> {resultado.perimetro.toFixed(2)} m</p>
+                <p><b>Vidro:</b> {resultado.vidro}</p>
+                <p><b>Perfil:</b> {resultado.perfil}</p>
+                <p><b>Acessórios:</b> {resultado.acessorios}</p>
+                <p><b>Obs:</b> {resultado.observacao}</p>
               </div>
-            </div>
-          )}
-
-          <button className="btn-calcular" type="submit">
-            Calcular Orçamento
-          </button>
-        </form>
-
-        {resultado && (
-          <>
-            <div className="orc-resumo">
-              <div className="resumo-card">
-                <span>Área</span>
-                <strong>{Number(resultado.area).toFixed(2)} m²</strong>
-              </div>
-
-              <div className="resumo-card">
-                <span>Alumínio</span>
-                <strong>{dinheiro(resultado.totalAluminio)}</strong>
-              </div>
-
-              <div className="resumo-card">
-                <span>Pintura</span>
-                <strong>{dinheiro(resultado.totalPintura)}</strong>
-              </div>
-
-              <div className="resumo-card">
-                <span>Vidro</span>
-                <strong>{dinheiro(resultado.totalVidro)}</strong>
-              </div>
-
-              <div className="resumo-card destaque">
-                <span>Venda Final</span>
-                <strong>{dinheiro(resultado.vendaTotal)}</strong>
-              </div>
-            </div>
-
-            <div className="orc-card">
-              <h2>Memória Técnica</h2>
-              <p><b>Tipologia:</b> {resultado.tipologia}</p>
-              <p><b>Linha:</b> {resultado.linha}</p>
-              <p><b>Medidas:</b> {resultado.largura} x {resultado.altura} mm</p>
-              <p><b>Peso alumínio:</b> {Number(resultado.totalPesoAluminio).toFixed(3)} kg</p>
-            </div>
-
-            <div className="orc-card">
-              <h2>Perfis Calculados</h2>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>Perfil</th>
-                    <th>Qtd</th>
-                    <th>Fórmula</th>
-                    <th>Medida</th>
-                    <th>Peso</th>
-                    <th>Custo</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {resultado.listaPerfis?.map((p, index) => (
-                    <tr key={index}>
-                      <td>{p.nome}</td>
-                      <td>{p.quantidade}</td>
-                      <td>{p.formula}</td>
-                      <td>{Number(p.medida_metro).toFixed(2)} m</td>
-                      <td>{Number(p.peso_total).toFixed(3)} kg</td>
-                      <td>{dinheiro(p.custo_aluminio + p.custo_pintura)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="orc-card">
-              <h2>Lista de Corte Industrial</h2>
-
-              {listaCorte.map((barra) => (
-                <div key={barra.barra} className="barra-box">
-                  <h3>Barra {barra.barra} - 6000 mm</h3>
-
-                  <table>
-                    <tbody>
-                      {barra.pecas.map((p, i) => (
-                        <tr key={i}>
-                          <td>{p.perfil}</td>
-                          <td>{p.medida} mm</td>
-                        </tr>
-                      ))}
-
-                      <tr>
-                        <td><b>Usado</b></td>
-                        <td><b>{barra.usado} mm</b></td>
-                      </tr>
-
-                      <tr>
-                        <td><b>Sobra</b></td>
-                        <td><b>{barra.sobra} mm</b></td>
-                      </tr>
-
-                      <tr>
-                        <td><b>Aproveitamento</b></td>
-                        <td><b>{barra.aproveitamento.toFixed(2)}%</b></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </div>
-
-            <button className="btn-calcular" onClick={salvarOrcamento}>
-              Salvar Orçamento
-            </button>
-
-            <button className="btn-pdf" onClick={() => window.print()}>
-              Gerar PDF Técnico Premium
-            </button>
-          </>
-        )}
-      </div>
-
-      {resultado && (
-        <div className="pdf-area">
-          <div className="pdf-header">
-            <div>
-              <h1>R&A VIDROS</h1>
-              <p>Orçamento Técnico Premium</p>
-            </div>
-
-            <div>
-              <h2>ORÇAMENTO</h2>
-              <p>{new Date().toLocaleDateString("pt-BR")}</p>
             </div>
           </div>
 
-          <div className="pdf-topo">
-            {tipSelecionada?.imagem ? (
-              <img
-                src={`${API}/uploads/${tipSelecionada.imagem}`}
-                alt={tipSelecionada.nome}
-              />
-            ) : (
-              <div className="pdf-sem-img">Sem imagem</div>
-            )}
+          <div style={card}>
+            <h2>Resumo de Custos</h2>
 
-            <div>
-              <h2>{resultado.tipologia}</h2>
-              <p><b>Linha:</b> {resultado.linha}</p>
-              <p><b>Medidas:</b> {resultado.largura} x {resultado.altura} mm</p>
-              <p><b>Área:</b> {Number(resultado.area).toFixed(2)} m²</p>
-              <p><b>Observação:</b> {tipSelecionada?.observacao_tecnica || ""}</p>
-            </div>
-          </div>
-
-          <div className="pdf-box">
-            <h3>Memória Técnica</h3>
-            <p><b>Peso total alumínio:</b> {Number(resultado.totalPesoAluminio).toFixed(3)} kg</p>
-            <p><b>Vidro:</b> {resultado.vidro?.nome || resultado.vidro?.tipo || "Não informado"}</p>
-          </div>
-
-          <div className="pdf-box">
-            <h3>Perfis Calculados</h3>
-
-            <table className="pdf-table">
-              <thead>
-                <tr>
-                  <th>Perfil</th>
-                  <th>Qtd</th>
-                  <th>Fórmula</th>
-                  <th>Medida</th>
-                  <th>Peso</th>
-                  <th>Custo</th>
-                </tr>
-              </thead>
-
+            <table style={table}>
               <tbody>
-                {resultado.listaPerfis?.map((p, index) => (
-                  <tr key={index}>
-                    <td>{p.nome}</td>
-                    <td>{p.quantidade}</td>
-                    <td>{p.formula}</td>
-                    <td>{Number(p.medida_metro).toFixed(2)} m</td>
-                    <td>{Number(p.peso_total).toFixed(3)} kg</td>
-                    <td>{dinheiro(p.custo_aluminio + p.custo_pintura)}</td>
-                  </tr>
-                ))}
+                <tr>
+                  <td style={td}>Vidro</td>
+                  <td style={td}>{dinheiro(resultado.totalVidro)}</td>
+                </tr>
+                <tr>
+                  <td style={td}>Perfis</td>
+                  <td style={td}>{dinheiro(resultado.totalPerfis)}</td>
+                </tr>
+                <tr>
+                  <td style={td}>Acessórios</td>
+                  <td style={td}>{dinheiro(resultado.totalAcessorios)}</td>
+                </tr>
+                <tr>
+                  <td style={td}><b>Custo Total</b></td>
+                  <td style={td}><b>{dinheiro(resultado.custoTotal)}</b></td>
+                </tr>
+                <tr>
+                  <td style={td}><b>Venda Final</b></td>
+                  <td style={td}><b>{dinheiro(resultado.vendaTotal)}</b></td>
+                </tr>
               </tbody>
             </table>
+
+            <button style={btn} onClick={salvarOrcamento}>
+              Salvar Orçamento Online
+            </button>
+
+            <button style={btnBlue} onClick={() => window.print()}>
+              Gerar PDF
+            </button>
           </div>
-
-          <div className="pdf-box">
-            <h3>Lista de Corte</h3>
-
-            {listaCorte.map((barra) => (
-              <div key={barra.barra}>
-                <h4>Barra {barra.barra} - 6000 mm</h4>
-
-                <table className="pdf-table">
-                  <tbody>
-                    {barra.pecas.map((p, i) => (
-                      <tr key={i}>
-                        <td>{p.perfil}</td>
-                        <td>{p.medida} mm</td>
-                      </tr>
-                    ))}
-
-                    <tr>
-                      <td><b>Sobra</b></td>
-                      <td><b>{barra.sobra} mm</b></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
-
-          <div className="pdf-resumo">
-            <div>
-              <span>Alumínio</span>
-              <strong>{dinheiro(resultado.totalAluminio)}</strong>
-            </div>
-
-            <div>
-              <span>Pintura</span>
-              <strong>{dinheiro(resultado.totalPintura)}</strong>
-            </div>
-
-            <div>
-              <span>Vidro</span>
-              <strong>{dinheiro(resultado.totalVidro)}</strong>
-            </div>
-
-            <div>
-              <span>Acessórios</span>
-              <strong>{dinheiro(resultado.totalAcessorios)}</strong>
-            </div>
-
-            <div className="pdf-total">
-              <span>VALOR FINAL</span>
-              <strong>{dinheiro(resultado.vendaTotal)}</strong>
-            </div>
-          </div>
-
-          <div className="pdf-footer">
-            <p>R&A VIDROS E ESQUADRIAS</p>
-            <p>Documento técnico gerado pelo ERP Industrial</p>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
 }
+
+function Card({ titulo, valor, destaque }) {
+  return (
+    <div style={destaque ? cardDark : cardResumo}>
+      <span>{titulo}</span>
+      <strong>{valor}</strong>
+    </div>
+  );
+}
+
+const page = {
+  minHeight: "100vh",
+  background: "#eef2f7",
+  padding: 30,
+};
+
+const card = {
+  background: "white",
+  borderRadius: 20,
+  padding: 24,
+  marginTop: 22,
+  boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
+};
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "2fr 1fr 1fr 1fr",
+  gap: 12,
+};
+
+const input = {
+  padding: 13,
+  borderRadius: 12,
+  border: "1px solid #cbd5e1",
+};
+
+const btn = {
+  padding: "13px 22px",
+  border: "none",
+  borderRadius: 12,
+  background: "#0f172a",
+  color: "white",
+  fontWeight: "bold",
+  cursor: "pointer",
+};
+
+const btnBlue = {
+  ...btn,
+  background: "#2563eb",
+  marginLeft: 10,
+};
+
+const resumo = {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, 1fr)",
+  gap: 15,
+  marginTop: 22,
+};
+
+const cardResumo = {
+  background: "white",
+  borderRadius: 18,
+  padding: 20,
+  display: "grid",
+  gap: 8,
+  boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
+};
+
+const cardDark = {
+  ...cardResumo,
+  background: "#0f172a",
+  color: "white",
+};
+
+const memoriaGrid = {
+  display: "grid",
+  gridTemplateColumns: "260px 1fr",
+  gap: 20,
+};
+
+const img = {
+  width: 260,
+  height: 170,
+  objectFit: "cover",
+  borderRadius: 14,
+};
+
+const table = {
+  width: "100%",
+  borderCollapse: "collapse",
+};
+
+const td = {
+  padding: 12,
+  borderBottom: "1px solid #e5e7eb",
+};
