@@ -1,66 +1,66 @@
-import React, { useEffect, useState } from "react";
+// src/pages/Clientes.js
+
+import { useEffect, useState } from "react";
+import api from "../services/api";
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
-
-  const [form, setForm] = useState({
-    nome: "",
-    telefone: "",
-    email: "",
-    cidade: "",
-  });
-
-  async function carregarClientes() {
-    const resp = await fetch("http://localhost:3001/clientes");
-    const dados = await resp.json();
-
-    setClientes(Array.isArray(dados) ? dados : []);
-  }
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [email, setEmail] = useState("");
+  const [cidade, setCidade] = useState("");
 
   useEffect(() => {
     carregarClientes();
   }, []);
 
-  async function salvarCliente() {
-    await fetch("http://localhost:3001/clientes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form),
-    });
+  const carregarClientes = async () => {
+    try {
+      const res = await api.get("/clientes");
+      setClientes(res.data);
+    } catch (err) {
+      console.log(err);
+      alert("Erro ao carregar clientes");
+    }
+  };
 
-    setForm({
-      nome: "",
-      telefone: "",
-      email: "",
-      cidade: "",
-    });
+  const salvarCliente = async () => {
+    try {
+      await api.post("/clientes", {
+        nome,
+        telefone,
+        email,
+        cidade,
+      });
 
-    carregarClientes();
-  }
+      setNome("");
+      setTelefone("");
+      setEmail("");
+      setCidade("");
 
-  async function excluir(id) {
-    await fetch(`http://localhost:3001/clientes/${id}`, {
-      method: "DELETE",
-    });
+      carregarClientes();
+    } catch (err) {
+      console.log(err);
+      alert("Erro ao salvar");
+    }
+  };
 
-    carregarClientes();
-  }
+  const excluirCliente = async (id) => {
+    try {
+      await api.delete(`/clientes/${id}`);
+      carregarClientes();
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   return (
-    <div
-      style={{
-        padding: 30,
-        background: "#f4f6f9",
-        minHeight: "100vh",
-      }}
-    >
-      <h1>CLIENTES</h1>
+    <div style={{ padding: 20 }}>
+      <h1>Clientes</h1>
 
       <div
         style={{
-          background: "white",
+          background: "#fff",
           padding: 20,
           borderRadius: 10,
           marginBottom: 20,
@@ -68,43 +68,26 @@ export default function Clientes() {
       >
         <input
           placeholder="Nome"
-          value={form.nome}
-          onChange={(e) =>
-            setForm({ ...form, nome: e.target.value })
-          }
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
         />
 
         <input
           placeholder="Telefone"
-          value={form.telefone}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              telefone: e.target.value,
-            })
-          }
+          value={telefone}
+          onChange={(e) => setTelefone(e.target.value)}
         />
 
         <input
           placeholder="Email"
-          value={form.email}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              email: e.target.value,
-            })
-          }
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
           placeholder="Cidade"
-          value={form.cidade}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              cidade: e.target.value,
-            })
-          }
+          value={cidade}
+          onChange={(e) => setCidade(e.target.value)}
         />
 
         <button onClick={salvarCliente}>
@@ -112,37 +95,29 @@ export default function Clientes() {
         </button>
       </div>
 
-      <div
-        style={{
-          background: "white",
-          padding: 20,
-          borderRadius: 10,
-        }}
-      >
-        {clientes.map((c) => (
-          <div
-            key={c.id}
-            style={{
-              borderBottom: "1px solid #ddd",
-              padding: 10,
-            }}
+      {clientes.map((c) => (
+        <div
+          key={c.id}
+          style={{
+            background: "#fff",
+            marginBottom: 10,
+            padding: 15,
+            borderRadius: 10,
+          }}
+        >
+          <h3>{c.nome}</h3>
+
+          <p>{c.telefone}</p>
+          <p>{c.email}</p>
+          <p>{c.cidade}</p>
+
+          <button
+            onClick={() => excluirCliente(c.id)}
           >
-            <h3>{c.nome}</h3>
-
-            <p>{c.telefone}</p>
-
-            <p>{c.email}</p>
-
-            <p>{c.cidade}</p>
-
-            <button
-              onClick={() => excluir(c.id)}
-            >
-              Excluir
-            </button>
-          </div>
-        ))}
-      </div>
+            Excluir
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
