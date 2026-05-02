@@ -1,133 +1,277 @@
-import React, { useEffect, useState } from "react";
+// src/pages/Tipologias.js
 
-const API = "http://localhost:3001";
+import { useEffect, useState } from "react";
+import api from "../services/api";
 
 export default function Tipologias() {
   const [tipologias, setTipologias] = useState([]);
+  const [imagem, setImagem] = useState(null);
+  const [preview, setPreview] = useState("");
 
   const [form, setForm] = useState({
     nome: "",
     linha: "Gold",
+    categoria: "",
     largura_padrao: "",
     altura_padrao: "",
+    permite_editar_medidas: true,
+    vidro: "",
+    perfil: "",
+    acessorios: "",
+    valor_base: "",
     observacao_tecnica: "",
-    imagem: null,
   });
 
   useEffect(() => {
-    carregar();
+    carregarTipologias();
   }, []);
 
-  async function carregar() {
+  const carregarTipologias = async () => {
     try {
-      const res = await fetch(`${API}/tipologias`);
-      const data = await res.json();
-      setTipologias(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.log(error);
-      setTipologias([]);
+      const res = await api.get("/tipologias");
+      setTipologias(
+        Array.isArray(res.data)
+          ? res.data
+          : []
+      );
+    } catch (err) {
+      console.log(err);
     }
-  }
+  };
 
-  async function salvar(e) {
-    e.preventDefault();
+  const selecionarImagem = (e) => {
+    const file = e.target.files[0];
 
-    if (!form.nome || !form.largura_padrao || !form.altura_padrao) {
-      alert("Preencha nome, largura e altura.");
-      return;
+    setImagem(file);
+
+    if (file) {
+      setPreview(
+        URL.createObjectURL(file)
+      );
     }
+  };
 
-    const dados = new FormData();
-    dados.append("nome", form.nome);
-    dados.append("linha", form.linha);
-    dados.append("largura_padrao", form.largura_padrao);
-    dados.append("altura_padrao", form.altura_padrao);
-    dados.append("observacao_tecnica", form.observacao_tecnica);
+  const salvarTipologia = async () => {
+    try {
+      let imagemUrl = "";
 
-    if (form.imagem) {
-      dados.append("imagem", form.imagem);
+      if (imagem) {
+        const formData =
+          new FormData();
+
+        formData.append(
+          "imagem",
+          imagem
+        );
+
+        const upload =
+          await api.post(
+            "/upload-tipologia",
+            formData,
+            {
+              headers: {
+                "Content-Type":
+                  "multipart/form-data",
+              },
+            }
+          );
+
+        imagemUrl =
+          upload.data.imagem;
+      }
+
+      await api.post(
+        "/tipologias",
+        {
+          ...form,
+          imagem: imagemUrl,
+        }
+      );
+
+      setForm({
+        nome: "",
+        linha: "Gold",
+        categoria: "",
+        largura_padrao: "",
+        altura_padrao: "",
+        permite_editar_medidas: true,
+        vidro: "",
+        perfil: "",
+        acessorios: "",
+        valor_base: "",
+        observacao_tecnica: "",
+      });
+
+      setImagem(null);
+      setPreview("");
+
+      carregarTipologias();
+
+      alert(
+        "Tipologia salva!"
+      );
+    } catch (err) {
+      console.log(err);
+      alert(
+        "Erro ao salvar tipologia"
+      );
     }
-
-    const res = await fetch(`${API}/tipologias`, {
-      method: "POST",
-      body: dados,
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.erro || "Erro ao salvar tipologia.");
-      return;
-    }
-
-    alert("Tipologia salva com imagem!");
-
-    setForm({
-      nome: "",
-      linha: "Gold",
-      largura_padrao: "",
-      altura_padrao: "",
-      observacao_tecnica: "",
-      imagem: null,
-    });
-
-    carregar();
-  }
+  };
 
   return (
     <div style={page}>
-      <h1>Tipologias PRO Visual</h1>
-      <p style={{ color: "#64748b" }}>
-        Cadastre tipologias com imagem, linha, medidas e observação técnica.
-      </p>
+      <h1>
+        Tipologias PRO
+      </h1>
 
-      <form style={card} onSubmit={salvar}>
-        <h2>Nova Tipologia</h2>
+      <div style={card}>
+        <h2>
+          Cadastro Técnico
+        </h2>
 
         <div style={grid}>
           <input
             style={input}
-            placeholder="Nome da tipologia"
+            placeholder="Nome"
             value={form.nome}
-            onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                nome:
+                  e.target.value,
+              })
+            }
           />
 
           <select
             style={input}
             value={form.linha}
-            onChange={(e) => setForm({ ...form, linha: e.target.value })}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                linha:
+                  e.target.value,
+              })
+            }
           >
-            <option value="Gold">Linha Gold</option>
-            <option value="Suprema">Linha Suprema</option>
-            <option value="Especial">Especial</option>
+            <option>
+              Gold
+            </option>
+
+            <option>
+              Suprema
+            </option>
+
+            <option>
+              Integrada
+            </option>
           </select>
 
           <input
             style={input}
-            type="number"
-            placeholder="Largura padrão mm"
-            value={form.largura_padrao}
+            placeholder="Categoria"
+            value={
+              form.categoria
+            }
             onChange={(e) =>
-              setForm({ ...form, largura_padrao: e.target.value })
+              setForm({
+                ...form,
+                categoria:
+                  e.target.value,
+              })
             }
           />
 
           <input
             style={input}
-            type="number"
-            placeholder="Altura padrão mm"
-            value={form.altura_padrao}
+            placeholder="Largura padrão"
+            value={
+              form.largura_padrao
+            }
             onChange={(e) =>
-              setForm({ ...form, altura_padrao: e.target.value })
+              setForm({
+                ...form,
+                largura_padrao:
+                  e.target.value,
+              })
             }
           />
 
           <input
             style={input}
+            placeholder="Altura padrão"
+            value={
+              form.altura_padrao
+            }
+            onChange={(e) =>
+              setForm({
+                ...form,
+                altura_padrao:
+                  e.target.value,
+              })
+            }
+          />
+
+          <input
+            style={input}
+            placeholder="Vidro"
+            value={form.vidro}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                vidro:
+                  e.target.value,
+              })
+            }
+          />
+
+          <input
+            style={input}
+            placeholder="Perfil"
+            value={form.perfil}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                perfil:
+                  e.target.value,
+              })
+            }
+          />
+
+          <input
+            style={input}
+            placeholder="Acessórios"
+            value={
+              form.acessorios
+            }
+            onChange={(e) =>
+              setForm({
+                ...form,
+                acessorios:
+                  e.target.value,
+              })
+            }
+          />
+
+          <input
+            style={input}
+            placeholder="Valor base"
+            value={
+              form.valor_base
+            }
+            onChange={(e) =>
+              setForm({
+                ...form,
+                valor_base:
+                  e.target.value,
+              })
+            }
+          />
+
+          <input
             type="file"
-            accept="image/*"
-            onChange={(e) =>
-              setForm({ ...form, imagem: e.target.files[0] })
+            onChange={
+              selecionarImagem
             }
           />
         </div>
@@ -135,146 +279,178 @@ export default function Tipologias() {
         <textarea
           style={textarea}
           placeholder="Observação técnica"
-          value={form.observacao_tecnica}
+          value={
+            form.observacao_tecnica
+          }
           onChange={(e) =>
-            setForm({ ...form, observacao_tecnica: e.target.value })
+            setForm({
+              ...form,
+              observacao_tecnica:
+                e.target.value,
+            })
           }
         />
 
-        {form.imagem && (
-          <div style={previewBox}>
-            <img
-              src={URL.createObjectURL(form.imagem)}
-              alt="Prévia"
-              style={preview}
-            />
-          </div>
+        {preview && (
+          <img
+            src={preview}
+            alt=""
+            style={previewImg}
+          />
         )}
 
-        <button style={btn} type="submit">
-          Salvar Tipologia com Imagem
+        <button
+          style={btn}
+          onClick={
+            salvarTipologia
+          }
+        >
+          Salvar Tipologia
         </button>
-      </form>
+      </div>
 
       <div style={card}>
-        <h2>Biblioteca Visual de Tipologias</h2>
+        <h2>
+          Biblioteca Técnica
+        </h2>
 
         <div style={cards}>
-          {tipologias.map((t) => (
-            <div key={t.id} style={tipCard}>
-              {t.imagem ? (
-                <img
-                  src={`${API}/uploads/${t.imagem}`}
-                  alt={t.nome}
-                  style={tipImg}
-                />
-              ) : (
-                <div style={semImagem}>Sem imagem</div>
-              )}
+          {tipologias.map(
+            (t) => (
+              <div
+                key={t.id}
+                style={
+                  tipologiaCard
+                }
+              >
+                {t.imagem && (
+                  <img
+                    src={`https://backend-esquadrias.onrender.com${t.imagem}`}
+                    alt=""
+                    style={
+                      imagemCard
+                    }
+                  />
+                )}
 
-              <h3>{t.nome}</h3>
-              <p><b>Linha:</b> {t.linha}</p>
-              <p>
-                <b>Medida:</b> {t.largura_padrao} x {t.altura_padrao} mm
-              </p>
-              <p>{t.observacao_tecnica}</p>
-            </div>
-          ))}
+                <h3>{t.nome}</h3>
+
+                <p>
+                  Linha:{" "}
+                  {t.linha}
+                </p>
+
+                <p>
+                  Categoria:{" "}
+                  {t.categoria}
+                </p>
+
+                <p>
+                  Medidas:
+                  {
+                    t.largura_padrao
+                  }
+                  x
+                  {
+                    t.altura_padrao
+                  }
+                </p>
+
+                <p>
+                  Vidro:{" "}
+                  {t.vidro}
+                </p>
+
+                <p>
+                  Perfil:{" "}
+                  {t.perfil}
+                </p>
+
+                <p>
+                  Valor Base:
+                  R${" "}
+                  {
+                    t.valor_base
+                  }
+                </p>
+              </div>
+            )
+          )}
         </div>
-
-        {tipologias.length === 0 && <p>Nenhuma tipologia cadastrada.</p>}
       </div>
     </div>
   );
 }
 
 const page = {
-  minHeight: "100vh",
+  padding: 20,
   background: "#eef2f7",
-  padding: 30,
+  minHeight: "100vh",
 };
 
 const card = {
-  background: "white",
-  padding: 24,
-  borderRadius: 20,
-  marginTop: 24,
-  boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
+  background: "#fff",
+  borderRadius: 14,
+  padding: 20,
+  marginBottom: 20,
 };
 
 const grid = {
   display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: 14,
+  gridTemplateColumns:
+    "repeat(3,1fr)",
+  gap: 12,
 };
 
 const input = {
-  padding: 13,
-  borderRadius: 12,
-  border: "1px solid #cbd5e1",
+  padding: 12,
+  borderRadius: 10,
+  border:
+    "1px solid #dbe2ea",
 };
 
 const textarea = {
-  ...input,
+  marginTop: 12,
   width: "100%",
-  minHeight: 80,
-  marginTop: 15,
-  boxSizing: "border-box",
-};
-
-const previewBox = {
-  marginTop: 20,
-};
-
-const preview = {
-  width: 220,
-  height: 140,
-  objectFit: "cover",
-  borderRadius: 14,
-  border: "1px solid #cbd5e1",
+  minHeight: 100,
+  padding: 12,
+  borderRadius: 10,
 };
 
 const btn = {
-  marginTop: 24,
-  width: "100%",
-  padding: 16,
+  marginTop: 15,
+  padding:
+    "14px 22px",
   border: "none",
-  borderRadius: 14,
-  background: "#0f172a",
-  color: "white",
+  borderRadius: 10,
+  background:
+    "#0f172a",
+  color: "#fff",
   fontWeight: "bold",
-  fontSize: 16,
-  cursor: "pointer",
+};
+
+const previewImg = {
+  width: 250,
+  marginTop: 20,
+  borderRadius: 12,
 };
 
 const cards = {
   display: "grid",
-  gridTemplateColumns: "repeat(4, 1fr)",
+  gridTemplateColumns:
+    "repeat(auto-fill,minmax(300px,1fr))",
   gap: 20,
 };
 
-const tipCard = {
+const tipologiaCard = {
   background: "#f8fafc",
-  borderRadius: 18,
-  padding: 16,
-  border: "1px solid #e2e8f0",
+  borderRadius: 14,
+  padding: 15,
 };
 
-const tipImg = {
+const imagemCard = {
   width: "100%",
-  height: 150,
+  height: 180,
   objectFit: "cover",
-  borderRadius: 14,
-  marginBottom: 12,
-};
-
-const semImagem = {
-  height: 150,
-  background: "#e5e7eb",
-  borderRadius: 14,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "#64748b",
-  marginBottom: 12,
+  borderRadius: 10,
 };
