@@ -1,16 +1,26 @@
-import { useEffect, useState } from "react";
-import api from "../services/api";
+import React, { useEffect, useState } from "react";
+
+const API = "http://localhost:3001";
 
 export default function Vidros() {
   const [vidros, setVidros] = useState([]);
+  const [pesquisa, setPesquisa] = useState("");
+  const [mostrarForm, setMostrarForm] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(null);
 
-  const [form, setForm] = useState({
-    nome: "",
-    tipo: "",
+  const [formulario, setFormulario] = useState({
+    id: null,
+    codigo: "",
+    descricao: "",
     espessura: "",
-    cor: "",
-    valor_m2: "",
-    observacao: "",
+    custo_m2: "",
+    categoria: "",
+    grupo: "",
+    largura: "",
+    altura: "",
+    area_minima: "",
+    arredondamento: 0,
+    imagem: "",
   });
 
   useEffect(() => {
@@ -19,186 +29,260 @@ export default function Vidros() {
 
   async function carregarVidros() {
     try {
-      const res = await api.get("/vidros");
-      setVidros(Array.isArray(res.data) ? res.data : []);
-    } catch (error) {
-      console.log(error);
-      setVidros([]);
+      const res = await fetch(`${API}/vidros`);
+      const data = await res.json();
+      setVidros(Array.isArray(data) ? data : []);
+    } catch {
+      alert("Erro ao carregar vidros");
     }
   }
 
-  async function salvarVidro(e) {
-    e.preventDefault();
+  function novoVidro() {
+    setFormulario({
+      id: null,
+      codigo: "",
+      descricao: "",
+      espessura: "",
+      custo_m2: "",
+      categoria: "",
+      grupo: "",
+      largura: "",
+      altura: "",
+      area_minima: "",
+      arredondamento: 0,
+      imagem: "",
+    });
+    setMostrarForm(true);
+  }
+
+  function editarVidro(item) {
+    setFormulario({ ...item });
+    setMostrarForm(true);
+    setMenuAberto(null);
+  }
+
+  function copiarVidro(item) {
+    setFormulario({
+      ...item,
+      id: null,
+      codigo: `${item.codigo || ""}-COPIA`,
+      descricao: `${item.descricao || ""} CÓPIA`,
+    });
+    setMostrarForm(true);
+    setMenuAberto(null);
+  }
+
+  async function excluirVidro(id) {
+    if (!window.confirm("Deseja excluir este vidro/chapa?")) return;
 
     try {
-      await api.post("/vidros", form);
-
-      setForm({
-        nome: "",
-        tipo: "",
-        espessura: "",
-        cor: "",
-        valor_m2: "",
-        observacao: "",
-      });
-
+      await fetch(`${API}/vidros/${id}`, { method: "DELETE" });
       carregarVidros();
-      alert("Vidro salvo com sucesso!");
-    } catch (error) {
-      console.log(error);
-      alert("Erro ao salvar vidro.");
+      setMenuAberto(null);
+    } catch {
+      alert("Erro ao excluir vidro");
     }
   }
 
-  function dinheiro(valor) {
-    return Number(valor || 0).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
+  function converterImagem(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormulario({ ...formulario, imagem: reader.result });
+    };
+    reader.readAsDataURL(file);
   }
+
+  async function salvarVidro() {
+    if (!formulario.codigo || !formulario.descricao) {
+      alert("Informe código e descrição");
+      return;
+    }
+
+    try {
+      const metodo = formulario.id ? "PUT" : "POST";
+      const url = formulario.id
+        ? `${API}/vidros/${formulario.id}`
+        : `${API}/vidros`;
+
+      const res = await fetch(url, {
+        method: metodo,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formulario),
+      });
+
+      const data = await res.json();
+
+      if (data.erro) {
+        alert(data.detalhe || data.erro);
+        return;
+      }
+
+      setMostrarForm(false);
+      carregarVidros();
+      alert("Vidro salvo com sucesso!");
+    } catch {
+      alert("Erro ao salvar vidro");
+    }
+  }
+
+  const filtrados = vidros.filter((v) => {
+    const texto = `${v.codigo || ""} ${v.descricao || ""} ${v.categoria || ""} ${v.grupo || ""}`.toLowerCase();
+    return texto.includes(pesquisa.toLowerCase());
+  });
 
   return (
     <div style={page}>
-      <h1>Vidros PRO Online</h1>
-      <p style={{ color: "#64748b" }}>
-        Cadastro técnico de vidros com valor por m² para orçamento automático.
-      </p>
+      <div style={topBar}>Cadastros » Vidros / Chapas</div>
 
-      <form style={card} onSubmit={salvarVidro}>
-        <h2>Novo Vidro</h2>
+      <div style={toolbar}>
+        <button style={btnNovo} onClick={novoVidro}>+ Novo Vidro / Chapa</button>
+        <button
+  style={btnCusto}
+  onClick={() => {
+    const percentual = prompt("Digite o reajuste em %. Exemplo: 10 para aumentar 10%");
+    if (!percentual) return;
 
-        <div style={grid}>
+    const fator = 1 + Number(percentual) / 100;
+
+    const atualizados = vidros.map((v) => ({
+      ...v,
+      custo_m2: Number(v.custo_m2 || 0) * fator,
+    }));
+
+    setVidros(atualizados);
+
+    alert("Preços reajustados na tela. Para salvar no banco, vamos criar a rota de reajuste.");
+  }}
+>
+  $ Ajustar Preços
+</button>
+        <div style={searchBox}>
+          🔎 <b>CÓDIGO</b>
           <input
-            style={input}
-            placeholder="Nome"
-            value={form.nome}
-            onChange={(e) => setForm({ ...form, nome: e.target.value })}
-          />
-
-          <input
-            style={input}
-            placeholder="Tipo: temperado, laminado..."
-            value={form.tipo}
-            onChange={(e) => setForm({ ...form, tipo: e.target.value })}
-          />
-
-          <input
-            style={input}
-            placeholder="Espessura: 8mm, 10mm..."
-            value={form.espessura}
-            onChange={(e) => setForm({ ...form, espessura: e.target.value })}
-          />
-
-          <input
-            style={input}
-            placeholder="Cor: incolor, fumê..."
-            value={form.cor}
-            onChange={(e) => setForm({ ...form, cor: e.target.value })}
-          />
-
-          <input
-            style={input}
-            type="number"
-            placeholder="Valor m²"
-            value={form.valor_m2}
-            onChange={(e) => setForm({ ...form, valor_m2: e.target.value })}
-          />
-
-          <input
-            style={input}
-            placeholder="Observação técnica"
-            value={form.observacao}
-            onChange={(e) => setForm({ ...form, observacao: e.target.value })}
+            style={searchInput}
+            placeholder="PESQUISAR..."
+            value={pesquisa}
+            onChange={(e) => setPesquisa(e.target.value)}
           />
         </div>
+      </div>
 
-        <button style={btn}>Salvar Vidro</button>
-      </form>
+      {mostrarForm && (
+        <div style={formBox}>
+          <h3>{formulario.id ? "Editar Vidro / Chapa" : "Novo Vidro / Chapa"}</h3>
 
-      <div style={card}>
-        <h2>Vidros cadastrados</h2>
+          <div style={gridForm}>
+            <input style={input} placeholder="Código" value={formulario.codigo} onChange={(e) => setFormulario({ ...formulario, codigo: e.target.value })} />
+            <input style={input} placeholder="Descrição" value={formulario.descricao} onChange={(e) => setFormulario({ ...formulario, descricao: e.target.value })} />
+            <input style={input} placeholder="Espessura mm" type="number" value={formulario.espessura} onChange={(e) => setFormulario({ ...formulario, espessura: e.target.value })} />
+            <input style={input} placeholder="Custo m² R$" type="number" value={formulario.custo_m2} onChange={(e) => setFormulario({ ...formulario, custo_m2: e.target.value })} />
+            <input style={input} placeholder="Categoria" value={formulario.categoria} onChange={(e) => setFormulario({ ...formulario, categoria: e.target.value })} />
+            <input style={input} placeholder="Grupo" value={formulario.grupo} onChange={(e) => setFormulario({ ...formulario, grupo: e.target.value })} />
+            <input style={input} placeholder="Largura mm" type="number" value={formulario.largura} onChange={(e) => setFormulario({ ...formulario, largura: e.target.value })} />
+            <input style={input} placeholder="Altura mm" type="number" value={formulario.altura} onChange={(e) => setFormulario({ ...formulario, altura: e.target.value })} />
+            <input style={input} placeholder="Área mínima m²" type="number" value={formulario.area_minima} onChange={(e) => setFormulario({ ...formulario, area_minima: e.target.value })} />
+            <input style={input} placeholder="Arred. mm" type="number" value={formulario.arredondamento} onChange={(e) => setFormulario({ ...formulario, arredondamento: e.target.value })} />
+            <input style={input} type="file" onChange={converterImagem} />
+          </div>
 
+          {formulario.imagem && <img src={formulario.imagem} alt="" style={previewImg} />}
+
+          <div style={actionsForm}>
+            <button style={btnSalvar} onClick={salvarVidro}>Salvar Vidro</button>
+            <button style={btnCancelar} onClick={() => setMostrarForm(false)}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      <div style={tableWrap}>
         <table style={table}>
           <thead>
             <tr>
-              <th style={th}>Nome</th>
-              <th style={th}>Tipo</th>
-              <th style={th}>Espessura</th>
-              <th style={th}>Cor</th>
-              <th style={th}>Valor m²</th>
-              <th style={th}>Observação</th>
+              <th style={th}>Código</th>
+              <th style={th}>Descrição</th>
+              <th style={th}>Espessu. mm</th>
+              <th style={th}>Custo m² R$</th>
+              <th style={th}>Categoria</th>
+              <th style={th}>Grupo</th>
+              <th style={th}>Largura mm</th>
+              <th style={th}>Altura mm</th>
+              <th style={th}>Área Min. m²</th>
+              <th style={th}>Arred. mm</th>
+              <th style={th}>Ações</th>
             </tr>
           </thead>
 
           <tbody>
-            {vidros.map((v) => (
-              <tr key={v.id}>
-                <td style={td}>{v.nome}</td>
-                <td style={td}>{v.tipo}</td>
-                <td style={td}>{v.espessura}</td>
-                <td style={td}>{v.cor}</td>
-                <td style={td}>{dinheiro(v.valor_m2)}</td>
-                <td style={td}>{v.observacao}</td>
+            {filtrados.map((item, index) => (
+              <tr key={item.id} style={index === 0 ? rowSelected : row}>
+                <td style={td}>{item.codigo}</td>
+                <td style={td}>{item.descricao}</td>
+                <td style={td}>{item.espessura}</td>
+                <td style={td}>R$ {Number(item.custo_m2 || 0).toFixed(2)}</td>
+                <td style={td}>{item.categoria}</td>
+                <td style={td}>{item.grupo}</td>
+                <td style={td}>{item.largura}</td>
+                <td style={td}>{item.altura}</td>
+                <td style={td}>{item.area_minima}</td>
+                <td style={td}>{item.arredondamento}</td>
+
+                <td style={tdCenter}>
+                  <div style={{ position: "relative" }}>
+                    <button
+                      style={btnDots}
+                      onClick={() => setMenuAberto(menuAberto === item.id ? null : item.id)}
+                    >
+                      ...
+                    </button>
+
+                    {menuAberto === item.id && (
+                      <div style={menuAcoes}>
+                        <button style={menuBtn} onClick={() => editarVidro(item)}>Editar</button>
+                        <button style={menuBtn} onClick={() => copiarVidro(item)}>Copiar</button>
+                        <button style={menuBtnExcluir} onClick={() => excluirVidro(item.id)}>Excluir</button>
+                      </div>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
 
-        {vidros.length === 0 && <p>Nenhum vidro cadastrado.</p>}
+      <div style={footer}>
+        Usuário: <b>ADMINISTRADOR</b> — {filtrados.length} vidros
       </div>
     </div>
   );
 }
 
-const page = {
-  minHeight: "100vh",
-  background: "#eef2f7",
-  padding: 30,
-};
-
-const card = {
-  background: "white",
-  borderRadius: 20,
-  padding: 24,
-  marginTop: 22,
-  boxShadow: "0 10px 30px rgba(15,23,42,0.08)",
-};
-
-const grid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: 12,
-};
-
-const input = {
-  padding: 13,
-  borderRadius: 12,
-  border: "1px solid #cbd5e1",
-};
-
-const btn = {
-  marginTop: 18,
-  padding: "15px 24px",
-  border: "none",
-  borderRadius: 12,
-  background: "#0f172a",
-  color: "white",
-  fontWeight: "bold",
-  cursor: "pointer",
-};
-
-const table = {
-  width: "100%",
-  borderCollapse: "collapse",
-};
-
-const th = {
-  textAlign: "left",
-  padding: 12,
-  background: "#f1f5f9",
-};
-
-const td = {
-  padding: 12,
-  borderBottom: "1px solid #e5e7eb",
-};
+const page = { background: "#e5e7eb", minHeight: "100vh", fontFamily: "Arial" };
+const topBar = { background: "#111827", color: "white", padding: "12px 18px", fontWeight: "bold" };
+const toolbar = { display: "flex", gap: 12, background: "#f8fafc", padding: 12, borderBottom: "1px solid #cbd5e1" };
+const btnNovo = { background: "#e5e7eb", border: "1px solid #94a3b8", padding: "10px 18px", fontWeight: "bold", cursor: "pointer" };
+const btnCusto = { ...btnNovo, background: "white" };
+const searchBox = { display: "flex", alignItems: "center", gap: 10, background: "white", border: "1px solid #cbd5e1", padding: "8px 12px", width: 450 };
+const searchInput = { border: "none", outline: "none", flex: 1 };
+const formBox = { background: "white", margin: 14, padding: 18, border: "1px solid #cbd5e1", borderRadius: 8 };
+const gridForm = { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 };
+const input = { padding: 10, border: "1px solid #cbd5e1", borderRadius: 6 };
+const previewImg = { marginTop: 12, width: 120, height: 90, objectFit: "contain", border: "1px solid #cbd5e1" };
+const actionsForm = { marginTop: 14, display: "flex", gap: 10 };
+const btnSalvar = { background: "#0f766e", color: "white", border: "none", padding: "10px 18px", borderRadius: 6, fontWeight: "bold", cursor: "pointer" };
+const btnCancelar = { background: "#111827", color: "white", border: "none", padding: "10px 18px", borderRadius: 6, cursor: "pointer" };
+const tableWrap = { background: "white", border: "1px solid #cbd5e1", overflowX: "auto", margin: 14 };
+const table = { width: "100%", minWidth: 1300, borderCollapse: "collapse" };
+const th = { background: "#d8dfc4", padding: 10, border: "1px solid #b6bea2", textAlign: "left", fontSize: 13 };
+const td = { padding: 9, border: "1px solid #d1d5db", fontSize: 13 };
+const tdCenter = { ...td, textAlign: "center" };
+const row = { background: "#f8fafc" };
+const rowSelected = { background: "#d6c51c" };
+const btnDots = { background: "#e5e7eb", border: "1px solid #9ca3af", padding: "4px 14px", cursor: "pointer" };
+const menuAcoes = { position: "absolute", right: 0, top: 30, background: "white", border: "1px solid #94a3b8", zIndex: 999, minWidth: 120, boxShadow: "0 8px 20px rgba(0,0,0,.2)" };
+const menuBtn = { display: "block", width: "100%", padding: 10, border: "none", background: "white", cursor: "pointer", textAlign: "left" };
+const menuBtnExcluir = { ...menuBtn, color: "#dc2626", fontWeight: "bold" };
+const footer = { background: "#0f172a", color: "white", padding: "8px 14px", position: "fixed", bottom: 0, left: 0, right: 0, fontSize: 12 };

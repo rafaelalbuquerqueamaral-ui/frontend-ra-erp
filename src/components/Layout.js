@@ -1,151 +1,139 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import React from "react";
+import { Link } from "react-router-dom";
 
-export default function Layout() {
-  const location = useLocation();
-
-  const menu = [
-    { nome: "Painel", path: "/" },
-    { nome: "Clientes", path: "/clientes" },
-    { nome: "Linhas", path: "/linhas" },
-    { nome: "Perfis", path: "/perfis" },
-    { nome: "Vidros", path: "/vidros" },
-    { nome: "Acessórios", path: "/acessorios" },
-    { nome: "Cores", path: "/cores" },
-    { nome: "Tipologias", path: "/tipologias" },
-    { nome: "Orçamentos", path: "/orcamentos" },
-    { nome: "Fachada CAD", path: "/fachada-cad" },
-    { nome: "Fachadas", path: "/fachadas" },
-    { nome: "Lista de Corte", path: "/lista-corte" },
-    { nome: "Produção", path: "/producao" },
-    { nome: "Importar Biblioteca", path: "/importar-biblioteca" },
-  ];
-
+export default function Layout({ children }) {
   return (
-    <div style={layout}>
+    <div style={container}>
       <aside style={sidebar}>
-        <div style={logoBox}>
-          <div style={logo}>R&A</div>
-          <div>
-            <h2 style={logoTitle}>Sistema</h2>
-            <span style={logoSub}>ERP Industrial</span>
-          </div>
-        </div>
+        <div style={logo}>R&A</div>
 
-        <nav>
-          {menu.map((item) => {
-            const ativo = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                style={{
-                  ...link,
-                  background: ativo ? "#2563eb" : "transparent",
-                  color: ativo ? "#fff" : "#cbd5e1",
-                }}
-              >
-                {item.nome}
-              </Link>
-            );
-          })}
-        </nav>
+        <h2 style={titulo}>Sistema</h2>
+
+        <Link style={link} to="/">
+          Painel
+        </Link>
+
+        <Link style={link} to="/clientes">
+          Clientes
+        </Link>
+
+        <Link style={link} to="/perfis">
+          Perfis
+        </Link>
+
+        <Link style={link} to="/vidros">
+          Vidros / Chapas
+        </Link>
+
+        <Link style={link} to="/tipologias">
+          Tipologias
+        </Link>
+
+        <Link style={linkDestaque} to="/tipologia-inteligente">
+          ⭐ Tipologia Inteligente
+        </Link>
+
+        <Link style={link} to="/tipologia-tecnica">
+          Tipologia Técnica
+        </Link>
+
+        <Link style={link} to="/orcamentos">
+          Orçamentos
+        </Link>
+
+        <Link style={link} to="/orcamento-pro">
+          Orçamento PRO
+        </Link>
+
+        <Link style={link} to="/fachadas">
+          Fachadas
+        </Link>
+
+        <Link style={link} to="/fachada-cad">
+          Fachada CAD
+        </Link>
+
+        <Link style={link} to="/importador-perfis">
+          Importador Perfis
+        </Link>
+
+        <Link style={link} to="/acessorios">
+          Acessórios
+        </Link>
+
+        <Link style={link} to="/cores">
+          Tratamento / Cores
+        </Link>
+        <Link
+  style={link}
+  to="/biblioteca-industrial"
+>
+  Biblioteca Industrial
+</Link>
+
+        <div style={usuario}>
+          Usuário: ADMINISTRADOR
+        </div>
       </aside>
 
       <main style={main}>
-        <div style={topbar}>
-          <div>
-            <strong>R&A Vidros e Esquadrias</strong>
-            <p style={{ margin: 0, color: "#64748b" }}>
-              Gestão técnica, orçamento e produção
-            </p>
-          </div>
-
-          <div style={badge}>Online</div>
-        </div>
-
-        <div style={content}>
-          <Outlet />
-        </div>
+        {children}
       </main>
     </div>
   );
 }
 
-const layout = {
+const container = {
   display: "flex",
   minHeight: "100vh",
-  fontFamily: "Inter, Arial, sans-serif",
-  background: "#eef2f7",
+  background: "#f3f4f6",
 };
 
 const sidebar = {
-  width: 260,
-  background: "linear-gradient(180deg,#020617,#0f172a)",
+  width: 280,
+  background:
+    "linear-gradient(180deg,#020617,#0f172a,#1e3a5f)",
   color: "#fff",
-  padding: 22,
-};
-
-const logoBox = {
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  marginBottom: 30,
+  padding: 24,
+  boxSizing: "border-box",
 };
 
 const logo = {
-  width: 48,
-  height: 48,
-  borderRadius: 14,
-  background: "#2563eb",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+  fontSize: 28,
   fontWeight: "bold",
+  marginBottom: 5,
 };
 
-const logoTitle = {
-  margin: 0,
-  fontSize: 20,
-};
-
-const logoSub = {
-  fontSize: 12,
-  color: "#94a3b8",
+const titulo = {
+  marginBottom: 25,
 };
 
 const link = {
   display: "block",
-  padding: "13px 15px",
-  borderRadius: 10,
+  color: "#fff",
   textDecoration: "none",
-  marginBottom: 7,
-  fontWeight: 600,
+  padding: "10px 0",
+  fontWeight: "bold",
+};
+
+const linkDestaque = {
+  display: "block",
+  color: "#fde68a",
+  textDecoration: "none",
+  padding: "12px 0",
+  fontWeight: "bold",
+  fontSize: 17,
+};
+
+const usuario = {
+  marginTop: 30,
+  borderTop: "1px solid rgba(255,255,255,0.2)",
+  paddingTop: 20,
+  fontWeight: "bold",
+  fontSize: 13,
 };
 
 const main = {
   flex: 1,
-  display: "flex",
-  flexDirection: "column",
-};
-
-const topbar = {
-  height: 74,
-  background: "#fff",
-  borderBottom: "1px solid #e2e8f0",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "0 28px",
-};
-
-const badge = {
-  background: "#dcfce7",
-  color: "#166534",
-  padding: "8px 14px",
-  borderRadius: 999,
-  fontWeight: "bold",
-};
-
-const content = {
-  padding: 28,
+  padding: 20,
 };

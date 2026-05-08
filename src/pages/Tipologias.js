@@ -1,456 +1,648 @@
-// src/pages/Tipologias.js
-
-import { useEffect, useState } from "react";
-import api from "../services/api";
+import React, {
+  useEffect,
+  useState
+} from "react";
 
 export default function Tipologias() {
-  const [tipologias, setTipologias] = useState([]);
-  const [imagem, setImagem] = useState(null);
-  const [preview, setPreview] = useState("");
 
-  const [form, setForm] = useState({
-    nome: "",
-    linha: "Gold",
-    categoria: "",
-    largura_padrao: "",
-    altura_padrao: "",
-    permite_editar_medidas: true,
-    vidro: "",
-    perfil: "",
-    acessorios: "",
-    valor_base: "",
-    observacao_tecnica: "",
-  });
+  // ====================================
+  // ESTADOS
+  // ====================================
 
-  useEffect(() => {
-    carregarTipologias();
-  }, []);
+  const [nome, setNome] =
+    useState("");
 
-  const carregarTipologias = async () => {
-    try {
-      const res = await api.get("/tipologias");
-      setTipologias(
-        Array.isArray(res.data)
-          ? res.data
-          : []
+  const [linha, setLinha] =
+    useState("Suprema");
+
+  const [largura, setLargura] =
+    useState("");
+
+  const [altura, setAltura] =
+    useState("");
+
+  const [observacao, setObservacao] =
+    useState("");
+
+  const [imagem, setImagem] =
+    useState("");
+
+  const [lista, setLista] =
+    useState([]);
+useEffect(() => {
+
+  carregarTipologias();
+
+}, []);
+  const [editandoId, setEditandoId] =
+    useState(null);
+// ====================================
+// CARREGAR
+// ====================================
+
+const carregarTipologias =
+async () => {
+
+  try {
+
+    const response =
+      await fetch(
+        "http://localhost:3001/api/tipologias"
       );
-    } catch (err) {
-      console.log(err);
-    }
+
+    const data =
+      await response.json();
+
+    setLista(data);
+
+  } catch (error) {
+
+    console.log(error);
+
+  }
+
+};
+
+  // ====================================
+  // SALVAR
+  // ====================================
+
+  const salvar = async () => {
+
+  if (
+    !nome ||
+    !largura ||
+    !altura
+  ) return;
+
+
+  const dados = {
+
+    nome,
+
+    linha,
+
+    largura,
+
+    altura,
+
+    observacao,
+
+    imagem
+
   };
 
-  const selecionarImagem = (e) => {
-    const file = e.target.files[0];
 
-    setImagem(file);
+  try {
 
-    if (file) {
-      setPreview(
-        URL.createObjectURL(file)
+    // ==========================
+    // EDITAR
+    // ==========================
+
+    if (editandoId) {
+
+      await fetch(
+
+        `http://localhost:3001/api/tipologias/${editandoId}`,
+
+        {
+
+          method: "PUT",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify(
+            dados
+          )
+
+        }
+
       );
+
     }
+
+    // ==========================
+    // NOVO
+    // ==========================
+
+    else {
+
+      await fetch(
+
+        "http://localhost:3001/api/tipologias",
+
+        {
+
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify(
+            dados
+          )
+
+        }
+
+      );
+
+    }
+
+
+    await carregarTipologias();
+
+    setEditandoId(null);
+
+    limpar();
+
+  } catch (error) {
+
+    console.log(error);
+
+  }
+
+};
+
+
+  // ====================================
+  // LIMPAR
+  // ====================================
+
+  const limpar = () => {
+
+    setNome("");
+
+    setLinha("Suprema");
+
+    setLargura("");
+
+    setAltura("");
+
+    setObservacao("");
+
+    setImagem("");
+
   };
 
-  const salvarTipologia = async () => {
-    try {
-      let imagemUrl = "";
 
-      if (imagem) {
-        const formData =
-          new FormData();
+  // ====================================
+  // EXCLUIR
+  // ====================================
 
-        formData.append(
-          "imagem",
-          imagem
-        );
+  const excluir = async (id) => {
 
-        const upload =
-          await api.post(
-            "/upload-tipologia",
-            formData,
-            {
-              headers: {
-                "Content-Type":
-                  "multipart/form-data",
-              },
-            }
-          );
+  try {
 
-        imagemUrl =
-          upload.data.imagem;
+    await fetch(
+
+      `http://localhost:3001/api/tipologias/${id}`,
+
+      {
+        method: "DELETE"
       }
 
-      await api.post(
-        "/tipologias",
-        {
-          ...form,
-          imagem: imagemUrl,
-        }
-      );
+    );
 
-      setForm({
-        nome: "",
-        linha: "Gold",
-        categoria: "",
-        largura_padrao: "",
-        altura_padrao: "",
-        permite_editar_medidas: true,
-        vidro: "",
-        perfil: "",
-        acessorios: "",
-        valor_base: "",
-        observacao_tecnica: "",
-      });
+    await carregarTipologias();
 
-      setImagem(null);
-      setPreview("");
+  } catch (error) {
 
-      carregarTipologias();
+    console.log(error);
 
-      alert(
-        "Tipologia salva!"
-      );
-    } catch (err) {
-      console.log(err);
-      alert(
-        "Erro ao salvar tipologia"
-      );
-    }
+  }
+
+};
+
+
+  // ====================================
+  // COPIAR
+  // ====================================
+
+  const copiar = (item) => {
+
+    const copia = {
+
+      ...item,
+
+      id: Date.now(),
+
+      nome:
+        item.nome +
+        " CÓPIA"
+
+    };
+
+    setLista([
+      ...lista,
+      copia
+    ]);
+
   };
 
+
+  // ====================================
+  // EDITAR
+  // ====================================
+
+  const editar = (item) => {
+
+    setEditandoId(item.id);
+
+    setNome(item.nome);
+
+    setLinha(item.linha);
+
+    setLargura(item.largura);
+
+    setAltura(item.altura);
+
+    setObservacao(
+      item.observacao
+    );
+
+    setImagem(item.imagem);
+
+  };
+
+
+  // ====================================
+
   return (
-    <div style={page}>
-      <h1>
-        Tipologias PRO
+
+    <div
+      style={{
+        padding: 30,
+        background: "#f1f5f9",
+        minHeight: "100vh"
+      }}
+    >
+
+      <h1
+        style={{
+          fontSize: 38,
+          marginBottom: 10
+        }}
+      >
+        Cadastro de Tipologias
       </h1>
 
-      <div style={card}>
-        <h2>
-          Cadastro Técnico
-        </h2>
+      <p
+        style={{
+          marginBottom: 30
+        }}
+      >
+        Biblioteca industrial
+      </p>
 
-        <div style={grid}>
+
+      {/* FORMULÁRIO */}
+
+      <div
+        style={{
+          background: "#fff",
+          padding: 20,
+          borderRadius: 15,
+          marginBottom: 30
+        }}
+      >
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(2,1fr)",
+            gap: 15
+          }}
+        >
+
           <input
-            style={input}
-            placeholder="Nome"
-            value={form.nome}
+            placeholder="Nome da tipologia"
+            value={nome}
             onChange={(e) =>
-              setForm({
-                ...form,
-                nome:
-                  e.target.value,
-              })
+              setNome(
+                e.target.value
+              )
             }
+            style={styles.input}
           />
 
+
           <select
-            style={input}
-            value={form.linha}
+            value={linha}
             onChange={(e) =>
-              setForm({
-                ...form,
-                linha:
-                  e.target.value,
-              })
+              setLinha(
+                e.target.value
+              )
             }
+            style={styles.input}
           >
-            <option>
-              Gold
-            </option>
 
             <option>
               Suprema
             </option>
 
             <option>
-              Integrada
+              Gold
             </option>
+
           </select>
 
-          <input
-            style={input}
-            placeholder="Categoria"
-            value={
-              form.categoria
-            }
-            onChange={(e) =>
-              setForm({
-                ...form,
-                categoria:
-                  e.target.value,
-              })
-            }
-          />
 
           <input
-            style={input}
+            type="number"
             placeholder="Largura padrão"
-            value={
-              form.largura_padrao
-            }
+            value={largura}
             onChange={(e) =>
-              setForm({
-                ...form,
-                largura_padrao:
-                  e.target.value,
-              })
+              setLargura(
+                e.target.value
+              )
             }
+            style={styles.input}
           />
 
+
           <input
-            style={input}
+            type="number"
             placeholder="Altura padrão"
-            value={
-              form.altura_padrao
-            }
+            value={altura}
             onChange={(e) =>
-              setForm({
-                ...form,
-                altura_padrao:
-                  e.target.value,
-              })
+              setAltura(
+                e.target.value
+              )
             }
+            style={styles.input}
           />
 
-          <input
-            style={input}
-            placeholder="Vidro"
-            value={form.vidro}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                vidro:
-                  e.target.value,
-              })
-            }
-          />
 
           <input
-            style={input}
-            placeholder="Perfil"
-            value={form.perfil}
+  type="file"
+  accept="image/*"
+  onChange={async (e) => {
+    const arquivo = e.target.files[0];
+
+    if (!arquivo) return;
+
+    const formData = new FormData();
+    formData.append("imagem", arquivo);
+
+    const response = await fetch("http://localhost:3001/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    setImagem(data.imagem);
+  }}
+  style={styles.input}
+/>
+
+
+          <textarea
+            placeholder="Observação técnica"
+            value={observacao}
             onChange={(e) =>
-              setForm({
-                ...form,
-                perfil:
-                  e.target.value,
-              })
+              setObservacao(
+                e.target.value
+              )
             }
+            style={{
+              ...styles.input,
+              minHeight: 80
+            }}
           />
 
-          <input
-            style={input}
-            placeholder="Acessórios"
-            value={
-              form.acessorios
-            }
-            onChange={(e) =>
-              setForm({
-                ...form,
-                acessorios:
-                  e.target.value,
-              })
-            }
-          />
-
-          <input
-            style={input}
-            placeholder="Valor base"
-            value={
-              form.valor_base
-            }
-            onChange={(e) =>
-              setForm({
-                ...form,
-                valor_base:
-                  e.target.value,
-              })
-            }
-          />
-
-          <input
-            type="file"
-            onChange={
-              selecionarImagem
-            }
-          />
         </div>
 
-        <textarea
-          style={textarea}
-          placeholder="Observação técnica"
-          value={
-            form.observacao_tecnica
-          }
-          onChange={(e) =>
-            setForm({
-              ...form,
-              observacao_tecnica:
-                e.target.value,
-            })
-          }
-        />
-
-        {preview && (
-          <img
-            src={preview}
-            alt=""
-            style={previewImg}
-          />
-        )}
 
         <button
-          style={btn}
-          onClick={
-            salvarTipologia
-          }
+          onClick={salvar}
+          style={styles.botao}
         >
-          Salvar Tipologia
+
+          {editandoId
+
+            ? "Atualizar Tipologia"
+
+            : "Salvar Tipologia"}
+
         </button>
+
       </div>
 
-      <div style={card}>
-        <h2>
-          Biblioteca Técnica
-        </h2>
 
-        <div style={cards}>
-          {tipologias.map(
-            (t) => (
-              <div
-                key={t.id}
-                style={
-                  tipologiaCard
+      {/* LISTA */}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit,minmax(320px,1fr))",
+          gap: 20
+        }}
+      >
+
+        {lista.map((item) => (
+
+          <div
+            key={item.id}
+            style={{
+              background: "#fff",
+              borderRadius: 15,
+              overflow: "hidden"
+            }}
+          >
+
+            {/* IMAGEM */}
+
+            <div
+              style={{
+                height: 220,
+                background:
+                  "#cbd5e1"
+              }}
+            >
+
+              {item.imagem ? (
+
+                <img
+                  src={item.imagem}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit:
+                      "cover"
+                  }}
+                />
+
+              ) : (
+
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems:
+                      "center",
+                    justifyContent:
+                      "center"
+                  }}
+                >
+
+                  Sem imagem
+
+                </div>
+
+              )}
+
+            </div>
+
+
+            {/* CONTEÚDO */}
+
+            <div
+              style={{
+                padding: 20
+              }}
+            >
+
+              <h2>
+                {item.nome}
+              </h2>
+
+              <p>
+                Linha:
+                {" "}
+                {item.linha}
+              </p>
+
+              <p>
+                Medidas:
+                {" "}
+                {item.largura}
+                {" x "}
+                {item.altura}
+                mm
+              </p>
+
+              <p>
+                {
+                  item.observacao
                 }
+              </p>
+
+
+              {/* BOTÕES */}
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  marginTop: 20,
+                  flexWrap: "wrap"
+                }}
               >
-                {t.imagem && (
-                  <img
-                    src={`https://backend-esquadrias.onrender.com${t.imagem}`}
-                    alt=""
-                    style={
-                      imagemCard
-                    }
-                  />
-                )}
 
-                <h3>{t.nome}</h3>
-
-                <p>
-                  Linha:{" "}
-                  {t.linha}
-                </p>
-
-                <p>
-                  Categoria:{" "}
-                  {t.categoria}
-                </p>
-
-                <p>
-                  Medidas:
-                  {
-                    t.largura_padrao
+                <button
+                  onClick={() =>
+                    editar(item)
                   }
-                  x
-                  {
-                    t.altura_padrao
+                  style={{
+                    ...styles.botaoPequeno,
+                    background:
+                      "#0f172a"
+                  }}
+                >
+                  Editar
+                </button>
+
+
+                <button
+                  onClick={() =>
+                    copiar(item)
                   }
-                </p>
+                  style={{
+                    ...styles.botaoPequeno,
+                    background:
+                      "#2563eb"
+                  }}
+                >
+                  Copiar
+                </button>
 
-                <p>
-                  Vidro:{" "}
-                  {t.vidro}
-                </p>
 
-                <p>
-                  Perfil:{" "}
-                  {t.perfil}
-                </p>
-
-                <p>
-                  Valor Base:
-                  R${" "}
-                  {
-                    t.valor_base
+                <button
+                  onClick={() =>
+                    excluir(
+                      item.id
+                    )
                   }
-                </p>
+                  style={{
+                    ...styles.botaoPequeno,
+                    background:
+                      "#dc2626"
+                  }}
+                >
+                  Excluir
+                </button>
+
               </div>
-            )
-          )}
-        </div>
+
+            </div>
+
+          </div>
+
+        ))}
+
       </div>
+
     </div>
+
   );
+
 }
 
-const page = {
-  padding: 20,
-  background: "#eef2f7",
-  minHeight: "100vh",
-};
 
-const card = {
-  background: "#fff",
-  borderRadius: 14,
-  padding: 20,
-  marginBottom: 20,
-};
+// ====================================
+// ESTILOS
+// ====================================
 
-const grid = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(3,1fr)",
-  gap: 12,
-};
+const styles = {
 
-const input = {
-  padding: 12,
-  borderRadius: 10,
-  border:
-    "1px solid #dbe2ea",
-};
+  input: {
+    padding: 12,
+    borderRadius: 10,
+    border:
+      "1px solid #ccc"
+  },
 
-const textarea = {
-  marginTop: 12,
-  width: "100%",
-  minHeight: 100,
-  padding: 12,
-  borderRadius: 10,
-};
+  botao: {
+    marginTop: 20,
+    background: "#0f172a",
+    color: "#fff",
+    border: "none",
+    borderRadius: 10,
+    padding:
+      "12px 20px",
+    cursor: "pointer",
+    fontWeight: "bold"
+  },
 
-const btn = {
-  marginTop: 15,
-  padding:
-    "14px 22px",
-  border: "none",
-  borderRadius: 10,
-  background:
-    "#0f172a",
-  color: "#fff",
-  fontWeight: "bold",
-};
+  botaoPequeno: {
+    background: "#0f172a",
+    color: "#fff",
+    border: "none",
+    borderRadius: 10,
+    padding:
+      "10px 16px",
+    cursor: "pointer",
+    fontWeight: "bold"
+  }
 
-const previewImg = {
-  width: 250,
-  marginTop: 20,
-  borderRadius: 12,
-};
-
-const cards = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(auto-fill,minmax(300px,1fr))",
-  gap: 20,
-};
-
-const tipologiaCard = {
-  background: "#f8fafc",
-  borderRadius: 14,
-  padding: 15,
-};
-
-const imagemCard = {
-  width: "100%",
-  height: 180,
-  objectFit: "cover",
-  borderRadius: 10,
 };
